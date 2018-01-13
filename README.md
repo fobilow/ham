@@ -7,14 +7,26 @@ for developing static HTML web pages
 HAM CONCEPTS
 ====
 
-LAYOUT
+LAYOUTS
 ---
 A Layout defines the structure of a web page
 
-PAGE
+PAGES
 ---
-A Page must have a layout. A page give a layout content
+A Page must have a layout. A page gives a layout content
 
 PARTIALS
 --
 Partials are reusable html modules that can be found on more than one page or layout
+
+INSTALLING HAM
+===
+Coming soon...
+
+USING HAM
+===
+* ham new [sitename]
+* ham build
+* ham serve
+* ham version
+
