@@ -13,46 +13,71 @@ import (
 )
 
 
+const configFileName = "ham.json"
 
-type comileConfig struct {
+type projectConfig struct {
 	Layout string
 	Css    []string
 	Js     []string
 }
 
-var workingDir string
+type Project struct {
+	name string
+	dir string
+}
 
-func compile(wd string) {
-	workingDir = wd
-
-	//check that working directory is valid (i.e it contains a ham.json)
+//check that working directory is valid (i.e it contains a ham.json)
+func (p Project) isValid() bool {
+	configFile := p.getConfigFile()
 	_, err := os.Stat(configFile)
 	if err != nil {
-		err = errors.New(workingDir+ " is not a valid HAM project")
+		return false
 	}
-	checkError(err)
 
+	return true
+}
+
+func (p Project) getConfigFile() string {
+	return filepath.Join(p.dir, configFileName)
+}
+
+type Compiler struct {
+	project Project
+	outputDir string
+}
+
+func NewCompiler(project Project, outputDir string) *Compiler {
+
+	if !project.isValid() {
+		err := errors.New(project.dir + " is not a valid HAM project")
+		checkError(err)
+	}
+
+	return &Compiler{project: project, outputDir: outputDir}
+}
+
+func (c *Compiler) compile() {
 
 	// get layouts content
-	layouts := getLayoutsMap()
+	layouts := c.getLayoutsMap()
 
 	//get all partials placeholder
-	partialsMap := getPartialsMap()
+	partialsMap := c.getPartialsMap()
 
 	//create output directory
-	err = os.MkdirAll(outputDir, 0744)
+	err := os.MkdirAll(c.outputDir, 0744)
 	checkError(err)
 
 	//loop through every page and replace partial placeholders
-	pagesDir := filepath.Join(workingDir, "pages")
+	pagesDir := filepath.Join(c.project.dir, "pages")
 	pagesFiles, err := ioutil.ReadDir(pagesDir)
 	checkError(err)
 
 	var compileJsonData []byte
-	compileJsonData, err = ioutil.ReadFile(configFile)
+	compileJsonData, err = ioutil.ReadFile(c.project.getConfigFile())
 	checkError(err)
 
-	compileInfo := make(map[string]comileConfig)
+	compileInfo := make(map[string]projectConfig)
 	err = json.Unmarshal(compileJsonData, &compileInfo)
 	checkError(err)
 
@@ -110,41 +135,27 @@ func compile(wd string) {
 			}
 		}
 
-
 		//write final html to file
-		pageFileName := filepath.Join(outputDir, pageName)
+		pageFileName := filepath.Join(c.outputDir, pageName)
 		fmt.Println("Creating page: "+pageFileName)
 		err = ioutil.WriteFile(pageFileName, []byte(pageHtml), os.ModePerm)
 		if err != nil {
 			fmt.Println(err.Error())
 		}
-
-
-
 	}
 
 	//copy over assets
-	cmd := exec.Command("cp", "-rf", filepath.Join(workingDir, "assets/"), filepath.Join(outputDir, "assets"))
+	//TODO optmize, perhaps using rsync?
+	cmd := exec.Command("cp", "-rf", filepath.Join(c.project.dir, "assets/"), filepath.Join(c.outputDir, "assets"))
 	if _, err := cmd.CombinedOutput(); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(2)
 	}
-
-	//write version no
-	versionStr := fmt.Sprintf("{\"%s\":\"%s\"}", "version", t.Format("2006.01.02-1504"))
-	ioutil.WriteFile(filepath.Join(outputDir, "version.json"), []byte(versionStr), os.ModePerm)
 }
 
-func checkError(err error) {
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
-	}
-}
-
-func getLayoutsMap() map[string]string {
+func (c *Compiler) getLayoutsMap() map[string]string {
 	layouts := make(map[string]string)
-	layoutDir := filepath.Join(workingDir, "layouts")
+	layoutDir := filepath.Join(c.project.dir, "layouts")
 	layoutFiles, err := ioutil.ReadDir(layoutDir)
 	checkError(err)
 	for _, file := range layoutFiles {
@@ -161,17 +172,18 @@ func getLayoutsMap() map[string]string {
 	return layouts
 }
 
-func getPartialsMap() map[string]string {
+func (c *Compiler) getPartialsMap() map[string]string {
 
 	replaceMap := make(map[string]string)
 
-	partialsDir := filepath.Join(workingDir, "partials")
+	partialsDir := filepath.Join(c.project.dir, "partials")
 	partialFiles, err := ioutil.ReadDir(partialsDir)
 	checkError(err)
 
 	for _, file := range partialFiles {
 		fn := strings.Replace(file.Name(), ".html", "", 1)
 		tag := fmt.Sprintf("<%s></%s>", fn, fn)
+		//tag := fmt.Sprintf("<div data-ham-partial=\"%s\"></div>", fn)
 		data, err := ioutil.ReadFile(filepath.Join(partialsDir, file.Name()))
 		checkError(err)
 
@@ -180,3 +192,12 @@ func getPartialsMap() map[string]string {
 
 	return replaceMap
 }
+
+func checkError(err error) {
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+}
+
+
