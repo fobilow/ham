@@ -16,11 +16,14 @@ type Ham struct {
 	defaultLayout      string
 	defaultPage        string
 	workingDir         string
+	version            string
+	host               string
+	port               int
 
 	compiler *Compiler
 }
 
-func (h *Ham) Init(){
+func (h *Ham) Init() {
 
 	h.defaultCompileJson = `{
   "index.html": {
@@ -71,6 +74,8 @@ func NewHam() *Ham {
 	workingDir, err := os.Getwd()
 	checkError(err)
 
+	h.host = "localhost"
+	h.port = 4120
 	h.workingDir = workingDir
 
 	return h
@@ -99,45 +104,40 @@ func (h *Ham) NewSite(siteName string) {
 
 func (h *Ham) Build(outputDir string) {
 
-	project := Project{"", h.workingDir}
-	h.compiler = NewCompiler(project, outputDir)
-
+	h.compiler = NewCompiler(Project{h.workingDir}, outputDir)
 	h.compiler.compile()
 }
 
-
-func (h *Ham) Serve() {
+func (h *Ham) Serve() error {
 
 	outputDir := filepath.Join(h.workingDir, "hamed")
 
-	project := Project{"", h.workingDir}
-	h.compiler = NewCompiler(project, outputDir)
+	h.compiler = NewCompiler(Project{h.workingDir}, outputDir)
 	h.compiler.compile()
 
-	port := 4120
+	open.Start(fmt.Sprintf("http://%s:%d", h.host, h.port))
 
-	open.Start(fmt.Sprintf("%s:%d", "http://localhost", port))
-
-	h.server(outputDir, "127.0.0.1", port)
+	return h.server(outputDir, h.host, h.port)
 }
 
-func (h * Ham) server(docRoot string, host string, port int) {
-	x, _ := filepath.Abs(docRoot)
-	fmt.Println("Serving "+ x)
-	http.Handle("/", http.FileServer(http.Dir(x)))
-	err := http.ListenAndServe(fmt.Sprintf("%s:%d", host, port), nil)
-	if err != nil{
-		fmt.Println(err)
-	}else{
-		fmt.Println("Server started!")
-	}
+func (h *Ham) server(docRoot string, host string, port int) error {
+	absDocRoot, _ := filepath.Abs(docRoot)
+	fmt.Println("Serving " + absDocRoot)
+	http.Handle("/", http.FileServer(http.Dir(absDocRoot)))
+	return http.ListenAndServe(fmt.Sprintf("%s:%d", host, port), nil)
 }
 
-func (h *Ham) Version() {
-
+func (h *Ham) Version() string {
+	return "Version: " + h.version
 }
 
-func (h *Ham) Help() {
+func (h *Ham) Help() string {
+	return `usage: ham [-wd] <command> [<args>]
 
-
+The following are supported HAM commands:
+	new		Creates a new HAM site
+	build		Compiles HAM site into html website
+	serve		Starts a web server and serves a HAM site
+	version		Displays version of HAM that you are running
+`
 }

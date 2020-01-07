@@ -22,7 +22,6 @@ type projectConfig struct {
 }
 
 type Project struct {
-	name string
 	dir string
 }
 
@@ -145,6 +144,7 @@ func (c *Compiler) compile() {
 	}
 
 	//copy over assets
+	//TODO add support for minification --no-minify
 	//TODO optmize, perhaps using rsync?
 	cmd := exec.Command("cp", "-rf", filepath.Join(c.project.dir, "assets/"), filepath.Join(c.outputDir, "assets"))
 	if _, err := cmd.CombinedOutput(); err != nil {

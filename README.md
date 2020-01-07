@@ -1,7 +1,7 @@
 HAM: Html As Modules
 ====
 
-HAM makes modular HTML development posssible. HAM provides a framework and compilier
+HAM makes modular HTML development possible. HAM provides a framework and compilier
 for developing static HTML web pages
 
 HAM CONCEPTS
@@ -26,3 +26,7 @@ Coming soon...
 * ham version
 * ham help
 
+
+### Working Directory
+- `build` and `serve` commands assume they are running from inside a HAM project
+unless `-wd` option is used to override the default project dir

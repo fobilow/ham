@@ -6,9 +6,11 @@ import (
 	"errors"
 	"strings"
 	"path/filepath"
+	"regexp"
 )
 
 var Version string
+var invalidCommandError = errors.New("please provide a valid action [new|build|serve|version|help]")
 
 func init() {
 	Version = "1.0.0"
@@ -29,64 +31,64 @@ func main() {
 		}
 	}
 
-	var workingDir string
-	workingDir, err = os.Getwd()
-	checkError(err)
-
-	if len(workingDirArg) > 0 && !strings.HasPrefix(workingDirArg, "/") {
-		workingDir = filepath.Join(workingDir, workingDirArg)
+	if len(workingDirArg) > 0 {
+		if !strings.HasPrefix(workingDirArg, "/"){
+			Ham.workingDir = filepath.Join(Ham.workingDir, workingDirArg)
+		}else{
+			Ham.workingDir = workingDirArg
+		}
 	}
 
-	Ham.workingDir = workingDir
-	fmt.Println("Working Dir: " + workingDir)
-
+	Ham.version = Version
 
 	switch os.Args[1] {
 	case "new":
-		Ham.NewSite(os.Args[2] + ".ham")
+		Ham.NewSite(os.Args[2])
 		break
 	case "build":
-		//TODO add support for minification --no-minify
 		Ham.Build(os.Args[2])
 		break
 	case "serve":
-		Ham.Serve()
+		err := Ham.Serve()
+		if err != nil {
+			fmt.Println(err)
+		} else {
+			fmt.Println("Server started!")
+		}
 		break
 	case "version":
-		Ham.Version()
+		fmt.Println(Ham.Version())
 		break
 	case "help":
-		Ham.Help()
+		fmt.Println(Ham.Help())
 	}
 }
 
 func validateArgs() error {
 
 	if len(os.Args) < 2 {
-		return errors.New("please provide a valid argument")
+		return invalidCommandError
 	}
 
 	switch os.Args[1] {
 	case "new":
 		if len(os.Args) < 3 {
 			return errors.New("please provide a name for your site")
-		} else {
-			//TODO validateArgs site name (ensure it contains valid characters)
+		}
+
+		matched, err := regexp.MatchString("\\W+", os.Args[2])
+		checkError(err)
+		if matched {
+			return errors.New("invalid project name. project name can only contains letters, digits or underscore")
 		}
 		break
 	case "build":
-		//TODO add support for minification --no-minify
 		if len(os.Args) < 3 {
 			return errors.New("please provide an output directory")
 		}
 		break
-	case "serve":
-		break
-	case "version":
-		break
-	case "help":
 	default:
-		return errors.New("please provide a valid action [new|build|serve|version|help]")
+		return invalidCommandError
 		break
 	}
 
