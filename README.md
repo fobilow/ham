@@ -52,7 +52,9 @@ Partials are reusable html modules that can be included on a page or layout
 <h1>Welcome to HAM</h1>
 ```
 ### INSTALLING HAM
-go install github.com/fobilow/ham
+`go install github.com/fobilow/ham@latest`
+
+For specific version, replace @latest with version number
 
 ### USING HAM
 * ham new [sitename]
