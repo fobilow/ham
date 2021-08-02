@@ -1,8 +1,0 @@
-hash: a52eb0bfe3fc835aeb6fb10000c3ec6adee6563b051f9ba1e538743ddefbcfe4
-updated: 2018-01-12T15:13:06.363119Z
-imports:
-- name: github.com/skratchdot/open-golang
-  version: 75fb7ed4208cf72d323d7d02fd1a5964a7a9073c
-  subpackages:
-  - open
-testImports: []

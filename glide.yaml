@@ -1,3 +1,0 @@
-package: ham
-import:
- - package: github.com/skratchdot/open-golang/open
