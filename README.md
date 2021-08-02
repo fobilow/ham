@@ -9,24 +9,54 @@ HAM CONCEPTS
 
 ### Layouts
 A Layout defines the structure of a web page
+```html
+<html lang="en">
+<head>
+     <meta charset="UTF-8">
+     <title>HAM</title>
+     <link type="ham/layout-css"/>
+</head>
+<body>
+
+<div id="app-info"></div>
+<div class="container">
+     <div class="row">
+          <embed type="ham/page"/>
+     </div>
+</div>
+<embed type="ham/layout-js"/>
+</body>
+</html>
+```
 
 ### Pages
 A Page must have a layout. A page gives a layout content
-
+```html
+<div class="page"
+     data-ham-layout='../layouts/default.html'
+     data-ham-layout-css='[
+     "../assets/css/test.css",
+     "../assets/css/test2.css"
+     ]'
+     data-ham-layout-js='[
+     "../assets/js/test.js",
+     "../assets/js/test.js"
+     ]'
+>
+  <embed type="ham/partial" src="../partials/header.html"/>
+</div>
+```
 ### Partials
 Partials are reusable html modules that can be included on a page or layout
-
+```html
+<h1>Welcome to HAM</h1>
+```
 ### INSTALLING HAM
-Coming soon...
+go install github.com/fobilow/ham
 
 ### USING HAM
 * ham new [sitename]
-* ham build
-* ham serve
+* ham build -w [working dir] -out [output directory]
+* ham serve -w [working dir]
 * ham version
 * ham help
-
-
-### Working Directory
-- `build` and `serve` commands assume they are running from inside a HAM project
-unless `-wd` option is used to override the default project dir
