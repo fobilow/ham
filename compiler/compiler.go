@@ -82,7 +82,7 @@ func (c *Compiler) Compile() error {
 	}
 
 	// copy over assets
-	src := filepath.Join(c.workingDir, "assets/")
+	src := filepath.Join(c.workingDir, "assets") + "/"
 	dest := filepath.Join(c.outputDir, "assets")
 	cmd := exec.Command("cp", "-rf", src, dest)
 	if _, err := cmd.CombinedOutput(); err != nil {
