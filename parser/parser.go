@@ -23,26 +23,6 @@ type Embed struct {
 	Src  string
 }
 
-func jumpToBody(doc *html.Node) *html.Node {
-	// fmt.Println("jumpToBody: ", doc.Data)
-	if doc.Data == "body" {
-		// fmt.Println("jump: body found")
-		return doc
-	}
-	if doc.Data == "html" {
-		// last child of HTML is BODY
-		return jumpToBody(doc.LastChild)
-	}
-	if doc.NextSibling != nil {
-		// fmt.Println("jump: sibling of ", doc.Data)
-		return jumpToBody(doc.NextSibling)
-	} else if doc.FirstChild != nil {
-		// fmt.Println("jump: fist child of ", doc.Data, doc.Type)
-		return jumpToBody(doc.FirstChild)
-	}
-	return doc
-}
-
 func ParseLayout(doc *html.Node) Layout {
 	var layout Layout
 	parseLayout(doc, &layout)
@@ -87,19 +67,14 @@ func parseLayout(start *html.Node, layout *Layout) {
 		}
 	}
 
-	switch {
-	case start.FirstChild != nil:
-		parseLayout(start.FirstChild, layout)
-	case start.NextSibling != nil:
-		parseLayout(start.NextSibling, layout)
-	case start.Parent.NextSibling != nil:
-		parseLayout(start.Parent.NextSibling, layout)
+	for start = start.FirstChild; start != nil; start = start.NextSibling {
+		parseLayout(start, layout)
 	}
 }
 
 func ParsePage(doc *html.Node) Page {
 	var page Page
-	parsePage(jumpToBody(doc), &page)
+	parsePage(doc, &page)
 	return page
 }
 
@@ -150,12 +125,10 @@ func parsePage(start *html.Node, page *Page) {
 				start.Attr = newAttr
 			}
 		}
-		if start.FirstChild != nil {
-			parsePage(start.FirstChild, page)
-		}
 	}
-	if start.NextSibling != nil {
-		parsePage(start.NextSibling, page)
+
+	for start = start.FirstChild; start != nil; start = start.NextSibling {
+		parsePage(start, page)
 	}
 }
 

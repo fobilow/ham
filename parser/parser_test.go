@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestCompile(t *testing.T) {
+func TestParsePage(t *testing.T) {
 	file, _ := os.Open("../test-site/pages/index.html")
 
 	// parse dom
@@ -29,5 +29,19 @@ func TestCompile(t *testing.T) {
 	got = len(page.Layout.CSS)
 	if got != want {
 		t.Errorf("parse failed: expected %d but got %d layout CSS embeds", want, got)
+	}
+}
+
+func TestParseLayout(t *testing.T) {
+	file, _ := os.Open("../test-site/layouts/default.html")
+
+	// parse dom
+	doc, _ := html.Parse(file)
+	layout := ParseLayout(doc)
+
+	want := 3
+	got := len(layout.Embeds)
+	if got != want {
+		t.Errorf("parse failed: expected %d but got %d page embeds", want, got)
 	}
 }
