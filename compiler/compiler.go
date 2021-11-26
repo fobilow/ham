@@ -124,11 +124,13 @@ func (c *Compiler) compilePage(doc *html.Node, fileName, version string) (*html.
 		c.layoutHTML = buf.Bytes()
 		pageCSS := make([]string, len(page.Layout.CSS))
 		for _, css := range page.Layout.CSS {
+			css = strings.Replace(css, "../", "", 1) // re-adjust css path
 			pageCSS = append(pageCSS, `<link rel="stylesheet" href="`+css+`?v=`+version+`">`)
 		}
 
 		pageJs := make([]string, len(page.Layout.Js))
 		for _, js := range page.Layout.Js {
+			js = strings.Replace(js, "../", "", 1) // re-adjust js path
 			pageJs = append(pageJs, `<script src="`+js+`?v=`+version+`"></script>`)
 		}
 		c.pageHTML = bytes.Replace(c.layoutHTML, []byte("{ham:page}"), c.pageHTML, 1)
