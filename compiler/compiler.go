@@ -70,7 +70,7 @@ func (c *Compiler) Compile() error {
 		}
 
 		// write final html to file
-		pageFileName := filepath.Join(c.outputDir, "pages", pageName)
+		pageFileName := filepath.Join(c.outputDir, pageName)
 		log.Println("Creating page: " + pageFileName)
 		if err := os.MkdirAll(filepath.Dir(pageFileName), os.ModePerm); err != nil {
 			return err

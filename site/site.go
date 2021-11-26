@@ -109,7 +109,7 @@ func (h *Site) Serve(workingDir string) error {
 		return err
 	}
 
-	absDocRoot, err := filepath.Abs(filepath.Join(outputDir, "pages"))
+	absDocRoot, err := filepath.Abs(outputDir)
 	if err != nil {
 		return err
 	}
