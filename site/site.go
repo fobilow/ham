@@ -2,11 +2,12 @@ package ham
 
 import (
 	"fmt"
-	"github.com/fobilow/ham/compiler"
-	"github.com/skratchdot/open-golang/open"
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/fobilow/ham/compiler"
+	"github.com/skratchdot/open-golang/open"
 )
 
 const configFileName = "ham.json"

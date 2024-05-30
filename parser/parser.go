@@ -2,8 +2,9 @@ package parser
 
 import (
 	"encoding/json"
-	"golang.org/x/net/html"
 	"log"
+
+	"golang.org/x/net/html"
 )
 
 type Layout struct {

@@ -3,11 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/fobilow/ham/site"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/fobilow/ham/site"
 )
 
 var Version string

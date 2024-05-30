@@ -3,8 +3,6 @@ package compiler
 import (
 	"bytes"
 	"fmt"
-	"github.com/fobilow/ham/parser"
-	"golang.org/x/net/html"
 	"io/ioutil"
 	"log"
 	"os"
@@ -12,6 +10,9 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/fobilow/ham/parser"
+	"golang.org/x/net/html"
 )
 
 const parseLimit = 1000 // max number of times to iterate and find partials inside partials
