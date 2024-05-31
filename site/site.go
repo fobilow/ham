@@ -24,7 +24,7 @@ const defaultLayout = `<!DOCTYPE html>
 <div id="app-info"></div>
 <div class="container">
   <div class="row">
-      
+      <embed type="ham/page" src="../pages" />
   </div>
 </div>
 <embed type="ham/layout-js" src="../assets/js" />
@@ -98,11 +98,7 @@ func (h *Site) Build(workingDir, outputDir string) error {
 
 func (h *Site) Serve(workingDir string) error {
 	outputDir := filepath.Join(workingDir, "hamed")
-	c, err := compiler.New(workingDir, outputDir)
-	if err != nil {
-		return err
-	}
-	if err := c.Compile(); err != nil {
+	if err := h.Build(workingDir, outputDir); err != nil {
 		return err
 	}
 
@@ -124,9 +120,9 @@ func (h *Site) Help() string {
 	return `usage: ham <command> [<options>]
 
 The following are supported HAM commands:
-	new		Creates a new HAM site
-	build		Compiles HAM site into html website
-	serve		Starts a web server and serves a HAM site
-	version		Displays version of HAM that you are running
+  new		Creates a new HAM site
+  build		Compiles HAM site into html website
+  serve		Starts a web server and serves a HAM site
+  version	Displays version of HAM that you are running
 `
 }
