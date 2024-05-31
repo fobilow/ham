@@ -3,7 +3,6 @@ package compiler
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -39,7 +38,7 @@ func (c *Compiler) Compile() error {
 
 	// loop through every page and replace partial placeholders
 	pagesDir := filepath.Join(c.workingDir, "pages")
-	pagesFiles, err := ioutil.ReadDir(pagesDir)
+	pagesFiles, err := os.ReadDir(pagesDir)
 	if err != nil {
 		return err
 	}
@@ -76,18 +75,21 @@ func (c *Compiler) Compile() error {
 		if err := os.MkdirAll(filepath.Dir(pageFileName), os.ModePerm); err != nil {
 			return err
 		}
-		if err := ioutil.WriteFile(pageFileName, c.pageHTML, os.ModePerm); err != nil {
+		if err := os.WriteFile(pageFileName, c.pageHTML, os.ModePerm); err != nil {
 			return err
 		}
 		c.Reset()
 	}
 
 	// copy over assets
-	src := filepath.Join(c.workingDir, "assets") + "/"
-	dest := filepath.Join(c.outputDir, "assets")
-	cmd := exec.Command("cp", "-rf", src, dest)
-	if _, err := cmd.CombinedOutput(); err != nil {
-		return err
+	assetsDir := filepath.Join(c.workingDir, "assets")
+	if _, err = os.Stat(assetsDir); err == nil {
+		src := assetsDir + "/"
+		dest := filepath.Join(c.outputDir, "assets")
+		cmd := exec.Command("cp", "-rf", src, dest)
+		if _, err := cmd.CombinedOutput(); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -134,6 +136,11 @@ func (c *Compiler) compilePage(doc *html.Node, fileName, version string) (*html.
 			js = strings.Replace(js, "../", "", 1) // re-adjust js path
 			pageJs = append(pageJs, `<script src="`+js+`?v=`+version+`"></script>`)
 		}
+		for _, js := range page.Layout.JsMod {
+			js = strings.Replace(js, "../", "", 1) // re-adjust js path
+			pageJs = append(pageJs, `<script type="module" src="`+js+`?v=`+version+`"></script>`)
+		}
+
 		c.pageHTML = bytes.Replace(c.layoutHTML, []byte("{ham:page}"), c.pageHTML, 1)
 		c.pageHTML = bytes.ReplaceAll(c.pageHTML, []byte("{ham:css}"), []byte(strings.Join(pageCSS, "\n")))
 		c.pageHTML = bytes.ReplaceAll(c.pageHTML, []byte("{ham:js}"), []byte(strings.Join(pageJs, "\n")))

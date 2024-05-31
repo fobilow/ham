@@ -11,6 +11,7 @@ type Layout struct {
 	Src    string
 	CSS    []string
 	Js     []string
+	JsMod  []string
 	Embeds []Embed
 }
 
@@ -120,6 +121,13 @@ func parsePage(start *html.Node, page *Page) {
 						continue
 					}
 					page.Layout.Js = js
+				case "data-ham-layout-js-mod":
+					var js []string
+					if err := json.Unmarshal([]byte(attr.Val), &js); err != nil {
+						log.Println(err.Error())
+						continue
+					}
+					page.Layout.JsMod = js
 				default:
 					newAttr = append(newAttr, attr)
 				}
