@@ -41,6 +41,10 @@ const defaultPage = `<div class="page"
      "../assets/js/js1.js",
      "../assets/js/js2.js"
      ]'
+	data-ham-layout-js-mod='[
+     "../assets/js/js-mod1.js",
+     "../assets/js/js-mod2.js"
+     ]'
 >
   <h1>Welcome to HAM</h1>
 </div>`
@@ -52,6 +56,7 @@ var siteStructure = []string{
 	"pages",
 	"partials",
 	"layouts",
+	"scripts/magicui",
 }
 
 type Site struct {

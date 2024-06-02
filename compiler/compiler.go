@@ -81,6 +81,33 @@ func (c *Compiler) Compile() error {
 		c.Reset()
 	}
 
+	// if scripts directory exists, compile typescript files
+	scriptsDir := filepath.Join(c.workingDir, "scripts")
+	if _, err = os.Stat(scriptsDir); err == nil {
+		log.Println("Compiling Scripts...")
+		scriptFiles, err := os.ReadDir(scriptsDir)
+		if err != nil {
+			log.Println("scripts error", err.Error())
+			return err
+		}
+		for _, scriptEntry := range scriptFiles {
+			if scriptEntry.IsDir() {
+				var tsConfigFile = filepath.Join(scriptsDir, scriptEntry.Name(), "tsconfig.json")
+				if _, err := os.Stat(filepath.Join(tsConfigFile)); err == nil {
+					log.Println("Typescript found. Compiling...")
+					cmd := exec.Command("tsc")
+					cmd.Dir = filepath.Join(scriptsDir, scriptEntry.Name())
+					if _, err := cmd.CombinedOutput(); err != nil {
+						log.Println("scripts error", err.Error())
+						return err
+					}
+				} else {
+					log.Println("scripts error", err.Error())
+				}
+			}
+		}
+	}
+
 	// copy over assets
 	assetsDir := filepath.Join(c.workingDir, "assets")
 	if _, err = os.Stat(assetsDir); err == nil {
