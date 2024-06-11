@@ -8,10 +8,10 @@ import (
 )
 
 type Layout struct {
-	Src    string
-	CSS    []string
-	Js     []string
-	JsMod  []string
+	Src    string   `json:"layout"`
+	CSS    []string `json:"css"`
+	Js     []string `json:"js"`
+	JsMod  []string `json:"js-mod"`
 	Embeds []Embed
 }
 
@@ -105,29 +105,11 @@ func parsePage(start *html.Node, page *Page) {
 			var newAttr []html.Attribute
 			for _, attr := range start.Attr {
 				switch attr.Key {
-				case "data-ham-layout":
-					page.Layout.Src = attr.Val
-				case "data-ham-layout-css":
-					var css []string
-					if err := json.Unmarshal([]byte(attr.Val), &css); err != nil {
+				case "data-ham-page-config":
+					if err := json.Unmarshal([]byte(attr.Val), page.Layout); err != nil {
 						log.Println(err.Error())
 						continue
 					}
-					page.Layout.CSS = css
-				case "data-ham-layout-js":
-					var js []string
-					if err := json.Unmarshal([]byte(attr.Val), &js); err != nil {
-						log.Println(err.Error())
-						continue
-					}
-					page.Layout.Js = js
-				case "data-ham-layout-js-mod":
-					var js []string
-					if err := json.Unmarshal([]byte(attr.Val), &js); err != nil {
-						log.Println(err.Error())
-						continue
-					}
-					page.Layout.JsMod = js
 				default:
 					newAttr = append(newAttr, attr)
 				}

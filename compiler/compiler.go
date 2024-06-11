@@ -37,17 +37,69 @@ func (c *Compiler) Compile() error {
 	}
 
 	// loop through every page and replace partial placeholders
-	pagesDir := filepath.Join(c.workingDir, "pages")
+	version := time.Now().Format("200602011504")
+	if err := c.compilePages("pages", version); err != nil {
+		return err
+	}
+
+	// if scripts directory exists, compile typescript files
+	scriptsDir := filepath.Join(c.workingDir, "scripts")
+	if _, err := os.Stat(scriptsDir); err == nil {
+		log.Println("Compiling Scripts...")
+		scriptFiles, err := os.ReadDir(scriptsDir)
+		if err != nil {
+			log.Println("scripts error", err.Error())
+			return err
+		}
+		for _, scriptEntry := range scriptFiles {
+			if scriptEntry.IsDir() {
+				var tsConfigFile = filepath.Join(scriptsDir, scriptEntry.Name(), "tsconfig.json")
+				if _, err := os.Stat(filepath.Join(tsConfigFile)); err == nil {
+					log.Println("Typescript found. Compiling...")
+					cmd := exec.Command("tsc")
+					cmd.Dir = filepath.Join(scriptsDir, scriptEntry.Name())
+					if out, err := cmd.CombinedOutput(); err != nil {
+						log.Println("scripts error", string(out))
+						return err
+					}
+				} else {
+					log.Println("scripts error os.Stat", err.Error())
+				}
+			}
+		}
+	}
+
+	// copy over assets
+	assetsDir := filepath.Join(c.workingDir, "assets")
+	if _, err := os.Stat(assetsDir); err == nil {
+		src := assetsDir + "/"
+		dest := filepath.Join(c.outputDir, "assets")
+		cmd := exec.Command("cp", "-rf", src, dest)
+		if _, err := cmd.CombinedOutput(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Compiler) compilePages(dir, version string) error {
+	pagesDir := filepath.Join(c.workingDir, dir)
 	pagesFiles, err := os.ReadDir(pagesDir)
 	if err != nil {
 		return err
 	}
 
-	version := time.Now().Format("200602011504")
-	for _, pageFile := range pagesFiles {
-		pageName := pageFile.Name()
-		fileName := filepath.Join(pagesDir, pageName)
+	for _, page := range pagesFiles {
+		pageName := page.Name()
+		if page.IsDir() {
+			if err := c.compilePages(filepath.Join(dir, pageName), version); err != nil {
+				return err
+			}
+			continue
+		}
 
+		fileName := filepath.Join(c.workingDir, dir, pageName)
 		file, err := os.Open(fileName)
 		if err != nil {
 			return err
@@ -62,7 +114,7 @@ func (c *Compiler) Compile() error {
 		hasEmbeds := true
 		i := 0
 		for hasEmbeds && i < parseLimit {
-			doc, hasEmbeds, err = c.compilePage(doc, fileName, version)
+			doc, hasEmbeds, err = c.compile(doc, fileName, version)
 			if err != nil {
 				return err
 			}
@@ -70,7 +122,8 @@ func (c *Compiler) Compile() error {
 		}
 
 		// write final html to file
-		pageFileName := filepath.Join(c.outputDir, pageName)
+		outDir := strings.Replace(dir, "pages", "", 1)
+		pageFileName := filepath.Join(c.outputDir, outDir, pageName)
 		log.Println("Creating page: " + pageFileName)
 		if err := os.MkdirAll(filepath.Dir(pageFileName), os.ModePerm); err != nil {
 			return err
@@ -80,52 +133,14 @@ func (c *Compiler) Compile() error {
 		}
 		c.Reset()
 	}
-
-	// if scripts directory exists, compile typescript files
-	scriptsDir := filepath.Join(c.workingDir, "scripts")
-	if _, err = os.Stat(scriptsDir); err == nil {
-		log.Println("Compiling Scripts...")
-		scriptFiles, err := os.ReadDir(scriptsDir)
-		if err != nil {
-			log.Println("scripts error", err.Error())
-			return err
-		}
-		for _, scriptEntry := range scriptFiles {
-			if scriptEntry.IsDir() {
-				var tsConfigFile = filepath.Join(scriptsDir, scriptEntry.Name(), "tsconfig.json")
-				if _, err := os.Stat(filepath.Join(tsConfigFile)); err == nil {
-					log.Println("Typescript found. Compiling...")
-					cmd := exec.Command("tsc")
-					cmd.Dir = filepath.Join(scriptsDir, scriptEntry.Name())
-					if _, err := cmd.CombinedOutput(); err != nil {
-						log.Println("scripts error", err.Error())
-						return err
-					}
-				} else {
-					log.Println("scripts error", err.Error())
-				}
-			}
-		}
-	}
-
-	// copy over assets
-	assetsDir := filepath.Join(c.workingDir, "assets")
-	if _, err = os.Stat(assetsDir); err == nil {
-		src := assetsDir + "/"
-		dest := filepath.Join(c.outputDir, "assets")
-		cmd := exec.Command("cp", "-rf", src, dest)
-		if _, err := cmd.CombinedOutput(); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
-func (c *Compiler) compilePage(doc *html.Node, fileName, version string) (*html.Node, bool, error) {
+func (c *Compiler) compile(doc *html.Node, pageFilePath, version string) (*html.Node, bool, error) {
 	page := parser.ParsePage(doc)
-	layoutFilePath := c.resolvePath(page.Layout.Src)
-	log.Println("Compiling Page: " + fileName + " with " + layoutFilePath)
+
+	layoutFilePath := filepath.Join(filepath.Dir(pageFilePath), page.Layout.Src)
+	log.Println("Compiling Page: " + pageFilePath + " with " + layoutFilePath)
 
 	buf := &bytes.Buffer{}
 	if err := html.Render(buf, doc); err != nil {
@@ -154,17 +169,29 @@ func (c *Compiler) compilePage(doc *html.Node, fileName, version string) (*html.
 		c.layoutHTML = buf.Bytes()
 		pageCSS := make([]string, len(page.Layout.CSS))
 		for _, css := range page.Layout.CSS {
-			css = strings.Replace(css, "../", "", 1) // re-adjust css path
+			css = filepath.Join(filepath.Dir(pageFilePath), css) // re-adjust css path
+			if err := createFile(css, nil); err != nil {
+				log.Println("error writing css file", err.Error())
+			}
+			css = css[strings.Index(css, "/assets"):]
 			pageCSS = append(pageCSS, `<link rel="stylesheet" href="`+css+`?v=`+version+`">`)
 		}
 
 		pageJs := make([]string, len(page.Layout.Js))
 		for _, js := range page.Layout.Js {
-			js = strings.Replace(js, "../", "", 1) // re-adjust js path
+			js = filepath.Join(filepath.Dir(pageFilePath), js) // re-adjust js path
+			if err := createFile(js, nil); err != nil {
+				log.Println("error writing js file", err.Error())
+			}
+			js = js[strings.Index(js, "/assets"):]
 			pageJs = append(pageJs, `<script src="`+js+`?v=`+version+`"></script>`)
 		}
 		for _, js := range page.Layout.JsMod {
-			js = strings.Replace(js, "../", "", 1) // re-adjust js path
+			js = filepath.Join(filepath.Dir(pageFilePath), js) // re-adjust js path
+			if err := createFile(js, nil); err != nil {
+				log.Println("error writing js file", err.Error())
+			}
+			js = js[strings.Index(js, "/assets"):]
 			pageJs = append(pageJs, `<script type="module" src="`+js+`?v=`+version+`"></script>`)
 		}
 
@@ -174,16 +201,23 @@ func (c *Compiler) compilePage(doc *html.Node, fileName, version string) (*html.
 
 		// find and replace layout embeds
 		for _, embed := range layout.Embeds {
-			embedContent := readFile(c.resolvePath(embed.Src))
-			c.pageHTML = bytes.ReplaceAll(c.pageHTML, []byte(parser.EmbedPlaceholder(embed.Src)), embedContent)
+			if embed.Src != "" {
+				embedFilePath := filepath.Join(filepath.Dir(layoutFilePath), embed.Src)
+				log.Println("embedding", embedFilePath)
+				embedContent := readFile(embedFilePath)
+				c.pageHTML = bytes.ReplaceAll(c.pageHTML, []byte(parser.EmbedPlaceholder(embed.Src)), embedContent)
+			}
 		}
 	}
 
 	// find and replace page embeds
 	for _, embed := range page.Embeds {
-		log.Println("embedding", embed.Src)
-		embedContent := readFile(c.resolvePath(embed.Src))
-		c.pageHTML = bytes.ReplaceAll(c.pageHTML, []byte(parser.EmbedPlaceholder(embed.Src)), embedContent)
+		if embed.Src != "" {
+			embedFilePath := filepath.Join(filepath.Dir(pageFilePath), embed.Src)
+			log.Println("embedding", embedFilePath)
+			embedContent := readFile(embedFilePath)
+			c.pageHTML = bytes.ReplaceAll(c.pageHTML, []byte(parser.EmbedPlaceholder(embed.Src)), embedContent)
+		}
 	}
 
 	doc, err := html.Parse(bytes.NewBuffer(c.pageHTML))
@@ -217,6 +251,9 @@ func readFile(filename string) []byte {
 	return readCache[filename]
 }
 
-func (c *Compiler) resolvePath(path string) string {
-	return filepath.Join(c.workingDir, strings.Replace(path, "../", "", 1))
+func createFile(filePath string, content []byte) error {
+	if err := os.MkdirAll(filepath.Dir(filePath), os.ModePerm); err != nil {
+		return err
+	}
+	return os.WriteFile(filePath, content, os.ModePerm)
 }

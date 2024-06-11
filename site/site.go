@@ -10,6 +10,7 @@ import (
 	"github.com/skratchdot/open-golang/open"
 )
 
+const DefaultOutputDirName = "hamout"
 const configFileName = "ham.json"
 const defaultCompileJSON = `{}`
 const defaultLayout = `<!DOCTYPE html>
@@ -17,34 +18,33 @@ const defaultLayout = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <title>HAM</title>
-  <link type="ham/layout-css" href="../assets/css" />
+  <link type="ham/layout-css"/>
 </head>
 <body>
 
 <div id="app-info"></div>
 <div class="container">
   <div class="row">
-      <embed type="ham/page" src="../pages" />
+      <embed type="ham/page"/>
   </div>
 </div>
-<embed type="ham/layout-js" src="../assets/js" />
+<embed type="ham/layout-js"/>
 </body>
 </html>
 `
 const defaultPage = `<div class="page"
-     data-ham-layout='../layouts/default.html'
-     data-ham-layout-css='[
-     "../assets/css/css1.css",
-     "../assets/css/css2.css"
-     ]'
-     data-ham-layout-js='[
-     "../assets/js/js1.js",
-     "../assets/js/js2.js"
-     ]'
-	data-ham-layout-js-mod='[
-     "../assets/js/js-mod1.js",
-     "../assets/js/js-mod2.js"
-     ]'
+	data-ham-page-config='{
+      "layout": "../layouts/default.html",
+       "css": [
+            "../assets/css/css1.css"
+       ],
+      "js": [
+            "../assets/js/js1.js"
+       ],
+       "js-mod": [
+            "../assets/js/js-mod1.js"
+       ]
+     }'
 >
   <h1>Welcome to HAM</h1>
 </div>`
@@ -56,7 +56,7 @@ var siteStructure = []string{
 	"pages",
 	"partials",
 	"layouts",
-	"scripts/magicui",
+	"scripts",
 }
 
 type Site struct {
@@ -102,7 +102,7 @@ func (h *Site) Build(workingDir, outputDir string) error {
 }
 
 func (h *Site) Serve(workingDir string) error {
-	outputDir := filepath.Join(workingDir, "hamed")
+	outputDir := filepath.Join(workingDir, DefaultOutputDirName)
 	if err := h.Build(workingDir, outputDir); err != nil {
 		return err
 	}
@@ -125,7 +125,7 @@ func (h *Site) Help() string {
 	return `usage: ham <command> [<options>]
 
 The following are supported HAM commands:
-  new		Creates a new HAM site
+  init		Creates a new HAM site
   build		Compiles HAM site into html website
   serve		Starts a web server and serves a HAM site
   version	Displays version of HAM that you are running
