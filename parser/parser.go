@@ -65,6 +65,8 @@ func parseLayout(start *html.Node, layout *Layout) {
 				start.Data = "{ham:page}"
 			case "ham/layout-js":
 				start.Data = "{ham:js}"
+			case "ham/layout-css":
+				start.Data = "{ham:css}"
 			}
 		}
 	}
@@ -107,7 +109,7 @@ func parsePage(start *html.Node, page *Page) {
 				switch attr.Key {
 				case "data-ham-page-config":
 					if err := json.Unmarshal([]byte(attr.Val), page.Layout); err != nil {
-						log.Println(err.Error())
+						log.Println("config decode error", err.Error())
 						continue
 					}
 				default:
