@@ -1,4 +1,4 @@
-package compiler
+package ham
 
 import (
 	"bytes"
@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fobilow/ham/parser"
 	"golang.org/x/net/html"
 )
 
@@ -137,7 +136,7 @@ func (c *Compiler) compilePages(dir, version string) error {
 }
 
 func (c *Compiler) compile(doc *html.Node, pageFilePath, version string) (*html.Node, bool, error) {
-	page := parser.ParsePage(doc)
+	page := ParsePage(doc)
 
 	layoutFilePath := filepath.Join(filepath.Dir(pageFilePath), page.Layout.Src)
 	log.Println("Compiling Page: " + pageFilePath + " with " + layoutFilePath)
@@ -160,7 +159,7 @@ func (c *Compiler) compile(doc *html.Node, pageFilePath, version string) (*html.
 			return nil, false, err
 		}
 
-		layout := parser.ParseLayout(doc)
+		layout := ParseLayout(doc)
 		buf.Reset()
 		if err := html.Render(buf, doc); err != nil {
 			return nil, false, err
@@ -205,7 +204,7 @@ func (c *Compiler) compile(doc *html.Node, pageFilePath, version string) (*html.
 				embedFilePath := filepath.Join(filepath.Dir(layoutFilePath), embed.Src)
 				log.Println("embedding", embedFilePath)
 				embedContent := readFile(embedFilePath)
-				c.pageHTML = bytes.ReplaceAll(c.pageHTML, []byte(parser.EmbedPlaceholder(embed.Src)), embedContent)
+				c.pageHTML = bytes.ReplaceAll(c.pageHTML, []byte(embedPlaceholder(embed.Src)), embedContent)
 			}
 		}
 	}
@@ -216,7 +215,7 @@ func (c *Compiler) compile(doc *html.Node, pageFilePath, version string) (*html.
 			embedFilePath := filepath.Join(filepath.Dir(pageFilePath), embed.Src)
 			log.Println("embedding", embedFilePath)
 			embedContent := readFile(embedFilePath)
-			c.pageHTML = bytes.ReplaceAll(c.pageHTML, []byte(parser.EmbedPlaceholder(embed.Src)), embedContent)
+			c.pageHTML = bytes.ReplaceAll(c.pageHTML, []byte(embedPlaceholder(embed.Src)), embedContent)
 		}
 	}
 

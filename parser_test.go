@@ -1,9 +1,10 @@
-package parser
+package ham
 
 import (
-	"golang.org/x/net/html"
 	"os"
 	"testing"
+
+	"golang.org/x/net/html"
 )
 
 func TestParsePage(t *testing.T) {

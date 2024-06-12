@@ -1,4 +1,4 @@
-package parser
+package ham
 
 import (
 	"encoding/json"
@@ -60,7 +60,7 @@ func parseLayout(start *html.Node, layout *Layout) {
 			start.Type = 1
 			switch em.Type {
 			case "ham/partial":
-				start.Data = EmbedPlaceholder(em.Src)
+				start.Data = embedPlaceholder(em.Src)
 			case "ham/page":
 				start.Data = "{ham:page}"
 			case "ham/layout-js":
@@ -102,7 +102,7 @@ func parsePage(start *html.Node, page *Page) {
 			page.Embeds = append(page.Embeds, em)
 			// replace <embed> tag with placeholders
 			start.Type = 1
-			start.Data = EmbedPlaceholder(em.Src)
+			start.Data = embedPlaceholder(em.Src)
 		case "div":
 			var newAttr []html.Attribute
 			for _, attr := range start.Attr {
@@ -125,6 +125,6 @@ func parsePage(start *html.Node, page *Page) {
 	}
 }
 
-func EmbedPlaceholder(src string) string {
+func embedPlaceholder(src string) string {
 	return "{embed:" + src + "}"
 }

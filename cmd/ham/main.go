@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/fobilow/ham/site"
+	"github.com/fobilow/ham"
 )
 
 var Version string
@@ -20,9 +20,10 @@ func init() {
 var validSiteName = regexp.MustCompile(`\W+`)
 
 func main() {
-	newCmd := flag.NewFlagSet("init", flag.ExitOnError)
-	buildCmd := flag.NewFlagSet("build", flag.ExitOnError)
-	serveCmd := flag.NewFlagSet("serve", flag.ExitOnError)
+	h := ham.NewSite()
+	newCmd := newFlagSet(h, "init")
+	buildCmd := newFlagSet(h, "build")
+	serveCmd := newFlagSet(h, "serve")
 
 	bwd := buildCmd.String("w", "./", "working directory")
 	bod := buildCmd.String("o", "./"+ham.DefaultOutputDirName, "output directory")
@@ -33,7 +34,6 @@ func main() {
 		command = os.Args[1]
 	}
 
-	h := ham.New()
 	switch command {
 	case "init":
 		name := os.Args[2]
@@ -94,4 +94,10 @@ func getWorkingDir(wd string) string {
 		workingDir = filepath.Join(defaultWorkingDir, wd)
 	}
 	return workingDir
+}
+
+func newFlagSet(s *ham.Site, name string) *flag.FlagSet {
+	fs := flag.NewFlagSet(name, flag.ExitOnError)
+	fs.Usage = func() { fmt.Println(s.Help()) }
+	return fs
 }

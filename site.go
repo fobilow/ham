@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/fobilow/ham/compiler"
 	"github.com/skratchdot/open-golang/open"
 )
 
@@ -64,7 +63,7 @@ type Site struct {
 	port int
 }
 
-func New() *Site {
+func NewSite() *Site {
 	return &Site{
 		host: "localhost",
 		port: 4120,
@@ -94,7 +93,7 @@ func (h *Site) NewProject(siteName, workingDir string) error {
 }
 
 func (h *Site) Build(workingDir, outputDir string) error {
-	c, err := compiler.New(workingDir, outputDir)
+	c, err := New(workingDir, outputDir)
 	if err != nil {
 		return err
 	}
