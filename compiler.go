@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/fobilow/ham/cp"
 	"golang.org/x/net/html"
 )
 
@@ -73,9 +73,10 @@ func (c *Compiler) Compile() error {
 	if _, err := os.Stat(assetsDir); err == nil {
 		src := assetsDir + "/"
 		dest := filepath.Join(c.outputDir, "assets")
-		cmd := exec.Command("cp", "-rf", src, dest)
-		if _, err := cmd.CombinedOutput(); err != nil {
-			return err
+		if err := cp.Dir(src, dest); err != nil {
+			fmt.Printf("Error copying directory: %v\n", err)
+		} else {
+			fmt.Println("Directory copied successfully.")
 		}
 	}
 
