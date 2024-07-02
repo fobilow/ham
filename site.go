@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/skratchdot/open-golang/open"
 )
@@ -33,25 +34,36 @@ const defaultLayout = `<!DOCTYPE html>
 `
 const defaultPage = `<div class="page"
 	data-ham-page-config='{
-      "layout": "../layouts/default.html",
-       "css": [
-            "../assets/css/css1.css"
-       ],
-      "js": [
-            "../assets/js/js1.js"
-       ],
-       "js-mod": [
-            "../assets/js/js-mod1.js"
-       ]
+      "layout": "../layouts/default.html"
      }'
 >
   <h1>Welcome to HAM</h1>
 </div>`
 
+const defaultTsConfig = `{
+  "compilerOptions": {
+    "target": "es2020",                                  /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
+    "module": "node16",                                /* Specify what module code is generated. */
+    "esModuleInterop": true,                             /* Emit additional JavaScript to ease support for importing CommonJS modules. This enables 'allowSyntheticDefaultImports' for type compatibility. */
+    "forceConsistentCasingInFileNames": true,            /* Ensure that casing is correct in imports. */
+    "strict": true,                                      /* Enable all strict type-checking options. */
+    "skipLibCheck": true,                                 /* Skip type checking all .d.ts files. */
+    "verbatimModuleSyntax": true,
+    "outDir": "../assets/%s/js"
+  }
+}`
+const tsconfigFileName = "tsconfig.json"
+const defaultPackageJSON = `{
+	  "name": "%s",
+	  "version": "1.0.0",
+	  "description": "",
+	  "type": "module"
+}`
+
 var siteStructure = []string{
-	"assets/css",
-	"assets/js",
-	"assets/img",
+	"assets/{site-name}/css",
+	"assets/{site-name}/js",
+	"assets/{site-name}/img",
 	"pages",
 	"partials",
 	"layouts",
@@ -73,23 +85,34 @@ func NewSite() *Site {
 func (h *Site) NewProject(siteName, workingDir string) error {
 	// generate folder structure
 	for _, folder := range siteStructure {
+		folder = strings.ReplaceAll(folder, "{site-name}", siteName)
 		if err := os.MkdirAll(filepath.Join(workingDir, siteName, folder), 0744); err != nil {
 			return err
 		}
 	}
 
 	// write default layout
-	if err := os.WriteFile(filepath.Join(workingDir, siteName, "layouts", "default.html"), []byte(defaultLayout), os.ModePerm); err != nil {
+	if err := createFile(filepath.Join(workingDir, siteName, "layouts", "default.html"), []byte(defaultLayout), false); err != nil {
 		return err
 	}
 
 	// write default index.html
-	if err := os.WriteFile(filepath.Join(workingDir, siteName, "pages", "index.html"), []byte(defaultPage), os.ModePerm); err != nil {
+	if err := createFile(filepath.Join(workingDir, siteName, "pages", "index.html"), []byte(defaultPage), false); err != nil {
+		return err
+	}
+
+	// write default tsconfig.json
+	if err := createFile(filepath.Join(workingDir, siteName, tsconfigFileName), []byte(fmt.Sprintf(defaultTsConfig, siteName)), false); err != nil {
+		return err
+	}
+
+	// write default package.json
+	if err := createFile(filepath.Join(workingDir, siteName, "package.json"), []byte(fmt.Sprintf(defaultPackageJSON, siteName)), false); err != nil {
 		return err
 	}
 
 	// write default ham.json
-	return os.WriteFile(filepath.Join(workingDir, siteName, configFileName), []byte(defaultCompileJSON), os.ModePerm)
+	return createFile(filepath.Join(workingDir, siteName, configFileName), []byte(defaultCompileJSON), true)
 }
 
 func (h *Site) Build(workingDir, outputDir string) error {

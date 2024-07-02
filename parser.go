@@ -9,9 +9,9 @@ import (
 
 type Layout struct {
 	Src    string   `json:"layout"`
-	CSS    []string `json:"css"`
-	Js     []string `json:"js"`
-	JsMod  []string `json:"js-mod"`
+	CSS    []string `json:"css,omitempty"`
+	Js     []string `json:"js,omitempty"`
+	JsMod  []string `json:"js-mod,omitempty"`
 	Embeds []Embed
 }
 
