@@ -74,9 +74,7 @@ func (c *Compiler) Compile() error {
 		src := assetsDir + "/"
 		dest := filepath.Join(c.outputDir, "assets")
 		if err := cp.Dir(src, dest); err != nil {
-			fmt.Printf("Error copying directory: %v\n", err)
-		} else {
-			fmt.Println("Directory copied successfully.")
+			fmt.Printf("Error copying %s: %v\n", src, err)
 		}
 	}
 
@@ -170,7 +168,7 @@ func (c *Compiler) compile(doc *html.Node, pageFilePath, version string) (*html.
 	page.Layout.JsMod = append(page.Layout.JsMod, getPath(pageTsFileName, "scripts", ""))
 	page.Layout.JsMod = append(page.Layout.JsMod, getPath(pageJsFileName, "assets", "js"))
 
-	_ = createFile(filepath.Join(c.workingDir, "scripts", tsconfigFileName), []byte(defaultTsConfig), false)
+	_ = createFile(filepath.Join(c.workingDir, tsconfigFileName), []byte(defaultTsConfig), false)
 
 	layoutFilePath := filepath.Join(filepath.Dir(pageFilePath), page.Layout.Src)
 	if _, err := os.Stat(layoutFilePath); err != nil {

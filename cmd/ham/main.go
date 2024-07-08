@@ -13,10 +13,6 @@ import (
 
 var Version string
 
-func init() {
-	Version = "1.0.0"
-}
-
 var validSiteName = regexp.MustCompile(`\W+`)
 
 func main() {
