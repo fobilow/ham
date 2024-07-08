@@ -33,15 +33,11 @@ A Layout defines the structure of a web page
 A Page must have a layout. A page gives a layout content
 ```html
 <div class="page"
-     data-ham-layout='../layouts/default.html'
-     data-ham-layout-css='[
-     "../assets/css/base.css",
-     "../assets/css/page.css"
-     ]'
-     data-ham-layout-js='[
-     "../assets/js/base.js",
-     "../assets/js/page.js"
-     ]'
+     data-ham-page-config='{
+     "layout": "../layouts/default.html",
+     "css": ["../assets/app/css/index.css"],
+     "js": ["../assets/app/js/index.js"]
+     }'
 >
   <embed type="ham/partial" src="../partials/header.html"/>
 </div>
@@ -58,8 +54,7 @@ Partials are reusable html modules that can be included on a page or layout
 <head>
   <meta charset="UTF-8"/>
   <title>HAM</title>
-  <link rel="stylesheet" href="../assets/css/base.css?v=202102082042"/>
-  <link rel="stylesheet" href="../assets/css/page.css?v=202102082042"/>
+  <link rel="stylesheet" href="/assets/app/css/index.css?v=202102082042"/>
 </head>
 <body>
 <div id="app-info"></div>
@@ -70,8 +65,7 @@ Partials are reusable html modules that can be included on a page or layout
     </div>
   </div>
 </div>
-<script src="../assets/js/base.js?v=202102082042"></script>
-<script src="../assets/js/page.js?v=202102082042"></script>
+<script src="../assets/app/js/index.js?v=202102082042"></script>
 </body>
 </html>
 ```
@@ -82,8 +76,8 @@ Partials are reusable html modules that can be included on a page or layout
 For specific version, replace @latest with version number
 
 ### USING HAM
-* ham new [sitename]
-* ham build -w [working dir] -out [output directory]
+* ham init [sitename]
+* ham build -w [working dir] -o [output directory]
 * ham serve -w [working dir]
 * ham version
 * ham help
