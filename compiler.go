@@ -212,7 +212,7 @@ func (c *Compiler) compile(doc *html.Node, pageFilePath, version string) (*html.
 			i := strings.Index(css, "/assets")
 			if i >= 0 {
 				css = css[i:]
-				pageCSS = append(pageCSS, `<link rel="stylesheet" href="`+css+`?v=`+version+`">`)
+				pageCSS = append(pageCSS, `<link rel="stylesheet" href="`+css+`">`)
 			}
 		}
 
@@ -226,10 +226,10 @@ func (c *Compiler) compile(doc *html.Node, pageFilePath, version string) (*html.
 			if err := createFile(js, nil, false); err != nil {
 				log.Println("error writing js file", err.Error())
 			}
-			i := strings.Index(js, "/assets")
+			i := strings.Index(js, filepath.Clean("/assets")) // make path os portable
 			if i >= 0 {
 				js = js[i:]
-				pageJs = append(pageJs, `<script src="`+js+`?v=`+version+`"></script>`)
+				pageJs = append(pageJs, `<script src="`+js+`"></script>`)
 			}
 		}
 		for _, js := range page.Layout.JsMod {
@@ -241,10 +241,10 @@ func (c *Compiler) compile(doc *html.Node, pageFilePath, version string) (*html.
 			if err := createFile(js, nil, false); err != nil {
 				log.Println("error writing js file", err.Error())
 			}
-			i := strings.Index(js, "/assets")
+			i := strings.Index(js, filepath.Clean("/assets")) // make path os portable
 			if i >= 0 {
 				js = js[i:]
-				pageJs = append(pageJs, `<script type="module" src="`+js+`?v=`+version+`"></script>`)
+				pageJs = append(pageJs, `<script type="module" src="`+js+`"></script>`)
 			}
 		}
 
