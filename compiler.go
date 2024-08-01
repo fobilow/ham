@@ -209,7 +209,7 @@ func (c *Compiler) compile(doc *html.Node, pageFilePath, version string) (*html.
 			if err := createFile(css, nil, false); err != nil {
 				log.Println("error writing css file", err.Error())
 			}
-			i := strings.Index(css, "/assets")
+			i := strings.Index(css, filepath.Clean("/assets")) // make path os portable
 			if i >= 0 {
 				css = css[i:]
 				pageCSS = append(pageCSS, `<link rel="stylesheet" href="`+css+`">`)
