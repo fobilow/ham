@@ -9,7 +9,7 @@ import (
 )
 
 func TestParsePage(t *testing.T) {
-	file, _ := os.Open("../test-site/pages/index.html")
+	file, _ := os.Open("./test-site/src/index.html")
 
 	// parse dom
 	doc, _ := html.Parse(file)
@@ -35,7 +35,7 @@ func TestParsePage(t *testing.T) {
 }
 
 func TestParseLayout(t *testing.T) {
-	file, _ := os.Open("../test-site/layouts/default.html")
+	file, _ := os.Open("./test-site/src/default.lhtml")
 
 	// parse dom
 	doc, _ := html.Parse(file)

@@ -10,7 +10,7 @@ import (
 	"github.com/skratchdot/open-golang/open"
 )
 
-const DefaultOutputDirName = "hamout"
+const DefaultOutputDir = "./public"
 const configFileName = "ham.json"
 const defaultCompileJSON = `{}`
 const defaultLayout = `<!DOCTYPE html>
@@ -34,7 +34,7 @@ const defaultLayout = `<!DOCTYPE html>
 `
 const defaultPage = `<div class="page"
 	data-ham-page-config='{
-      "layout": "../layouts/default.html"
+      "layout": "default.lhtml"
      }'
 >
   <h1>Welcome to HAM</h1>
@@ -49,25 +49,68 @@ const defaultTsConfig = `{
     "strict": true,                                      /* Enable all strict type-checking options. */
     "skipLibCheck": true,                                 /* Skip type checking all .d.ts files. */
     "verbatimModuleSyntax": true,
-    "outDir": "../assets/%s/js"
-  }
+    "outDir": "./public/assets/js"
+  },
+  "include": ["./src"],
+  "exclude": ["./node_modules", "./public"]
 }`
 const tsconfigFileName = "tsconfig.json"
 const defaultPackageJSON = `{
 	  "name": "%s",
 	  "version": "1.0.0",
-	  "description": "",
-	  "type": "module"
+	  "description": "A HAM Application",
+	  "type": "module",
+	  "scripts": {
+		"build": "ham build && rollup -c",
+		"test": "echo \"Error: no test specified\" && exit 1"
+	  },
+	  "devDependencies": {
+		"@rollup/plugin-node-resolve": "^15.2.3",
+		"rollup": "3.17.3",
+		"rollup-plugin-copy": "3.4.0",
+		"rollup-plugin-typescript2": "^0.36.0",
+		"@rollup/plugin-commonjs": "^26.0.1",
+		"glob": "^11.0.0"
+	  }
 }`
 
+const defaultGitIgnore = `node_modules`
+const defaultRollupConfig = `import typescript from 'rollup-plugin-typescript2';
+import { nodeResolve } from '@rollup/plugin-node-resolve';
+import copy from 'rollup-plugin-copy';
+import commonjs from '@rollup/plugin-commonjs';
+import {glob} from 'glob';
+
+const inputFiles = glob.sync('./src/*.ts'); // Adjust the pattern as needed
+export default {
+    input: inputFiles,
+    output: {
+        dir: 'public/assets/js',
+        format: 'esm',
+        sourcemap: false,
+        preserveModules: true,  // Preserve module structure
+        preserveModulesRoot: 'src',  // Keep module structure relative to 'src'
+    },
+    plugins: [
+        copy({
+            targets: [
+                {src: 'src/*.css', dest: 'public/assets/css'},
+                {src: 'src/*.js', dest: 'public/assets/js'}
+            ]
+        }),
+        typescript({
+            tsconfig: './tsconfig.json'
+        }),
+        nodeResolve(), // This plugin allows Rollup to resolve modules from node_modules
+        commonjs() // Converts CommonJS modules to ES modules
+    ]
+}`
+
+const srcDir = "src"
+
 var siteStructure = []string{
-	"assets/{site-name}/css",
-	"assets/{site-name}/js",
-	"assets/{site-name}/img",
-	"pages",
-	"partials",
-	"layouts",
-	"scripts",
+	"public/assets/img",
+	"src",
 }
 
 type Site struct {
@@ -92,22 +135,42 @@ func (h *Site) NewProject(siteName, workingDir string) error {
 	}
 
 	// write default layout
-	if err := createFile(filepath.Join(workingDir, siteName, "layouts", "default.html"), []byte(defaultLayout), false); err != nil {
+	if err := createFile(filepath.Join(workingDir, siteName, srcDir, "default.lhtml"), []byte(defaultLayout), false); err != nil {
 		return err
 	}
 
 	// write default index.html
-	if err := createFile(filepath.Join(workingDir, siteName, "pages", "index.html"), []byte(defaultPage), false); err != nil {
+	if err := createFile(filepath.Join(workingDir, siteName, srcDir, "index.html"), []byte(defaultPage), false); err != nil {
+		return err
+	}
+
+	// write default index.css
+	if err := createFile(filepath.Join(workingDir, siteName, srcDir, "index.css"), []byte(""), false); err != nil {
+		return err
+	}
+
+	// write default index.ts
+	if err := createFile(filepath.Join(workingDir, siteName, srcDir, "index.ts"), []byte(""), false); err != nil {
 		return err
 	}
 
 	// write default tsconfig.json
-	if err := createFile(filepath.Join(workingDir, siteName, tsconfigFileName), []byte(fmt.Sprintf(defaultTsConfig, siteName)), false); err != nil {
+	if err := createFile(filepath.Join(workingDir, siteName, tsconfigFileName), []byte(defaultTsConfig), false); err != nil {
 		return err
 	}
 
 	// write default package.json
 	if err := createFile(filepath.Join(workingDir, siteName, "package.json"), []byte(fmt.Sprintf(defaultPackageJSON, siteName)), false); err != nil {
+		return err
+	}
+
+	// write default rollup.config.js
+	if err := createFile(filepath.Join(workingDir, siteName, "rollup.config.js"), []byte(defaultRollupConfig), true); err != nil {
+		return err
+	}
+
+	// write default .gitignore
+	if err := createFile(filepath.Join(workingDir, siteName, ".gitignore"), []byte(defaultGitIgnore), true); err != nil {
 		return err
 	}
 
@@ -124,7 +187,7 @@ func (h *Site) Build(workingDir, outputDir string) error {
 }
 
 func (h *Site) Serve(workingDir string) error {
-	outputDir := filepath.Join(workingDir, DefaultOutputDirName)
+	outputDir := filepath.Join(workingDir, DefaultOutputDir)
 	if err := h.Build(workingDir, outputDir); err != nil {
 		return err
 	}

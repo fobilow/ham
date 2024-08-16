@@ -19,11 +19,8 @@ func main() {
 	h := ham.NewSite()
 	newCmd := newFlagSet(h, "init")
 	buildCmd := newFlagSet(h, "build")
-	serveCmd := newFlagSet(h, "serve")
 
 	bwd := buildCmd.String("w", "./", "working directory")
-	bod := buildCmd.String("o", "./"+ham.DefaultOutputDirName, "output directory")
-	swd := serveCmd.String("w", "./", "working directory")
 
 	command := ""
 	if len(os.Args) > 1 {
@@ -52,21 +49,7 @@ func main() {
 			buildCmd.Usage()
 			return
 		}
-		if len(*bod) == 0 {
-			fmt.Println("please provide an output directory")
-			buildCmd.Usage()
-			return
-		}
-		checkError(h.Build(getWorkingDir(*bwd), *bod))
-	case "serve":
-		checkError(serveCmd.Parse(os.Args[2:]))
-		if len(*swd) == 0 {
-			fmt.Println("please provide a working directory")
-			serveCmd.Usage()
-			return
-		}
-		checkError(h.Serve(getWorkingDir(*swd)))
-		fmt.Println("Server started!")
+		checkError(h.Build(getWorkingDir(*bwd), ham.DefaultOutputDir))
 	case "version":
 		fmt.Println("Version: " + Version)
 	default:

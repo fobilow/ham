@@ -7,9 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
-	"github.com/fobilow/ham/cp"
 	"golang.org/x/net/html"
 )
 
@@ -35,63 +33,30 @@ func (c *Compiler) Compile() error {
 		return err
 	}
 
-	// loop through every page and replace partial placeholders
-	version := time.Now().Format("200602011504")
-	if err := c.compilePages("pages", version); err != nil {
+	if err := c.compilePages(srcDir); err != nil {
 		return err
-	}
-
-	// if scripts directory exists, compile typescript files
-	//scriptsDir := filepath.Join(c.workingDir, "scripts")
-	//if _, err := os.Stat(scriptsDir); err == nil {
-	//	log.Println("Compiling Scripts...")
-	//	scriptFiles, err := os.ReadDir(scriptsDir)
-	//	if err != nil {
-	//		log.Println("scripts error", err.Error())
-	//		return err
-	//	}
-	//	for _, scriptEntry := range scriptFiles {
-	//		if scriptEntry.IsDir() {
-	//			var tsConfigFile = filepath.Join(scriptsDir, scriptEntry.Name(), "tsconfig.json")
-	//			if _, err := os.Stat(filepath.Join(tsConfigFile)); err == nil {
-	//				log.Println("Typescript found. Compiling...")
-	//				cmd := exec.Command("tsc", "-p", tsConfigFile)
-	//				//cmd.Dir = filepath.Join(scriptsDir, scriptEntry.Name())
-	//				if out, err := cmd.CombinedOutput(); err != nil {
-	//					log.Println("scripts error", string(out))
-	//					return err
-	//				}
-	//			} else {
-	//				log.Println("scripts error os.Stat", err.Error())
-	//			}
-	//		}
-	//	}
-	//}
-
-	// copy over assets
-	assetsDir := filepath.Join(c.workingDir, "assets")
-	if _, err := os.Stat(assetsDir); err == nil {
-		src := assetsDir + "/"
-		dest := filepath.Join(c.outputDir, "assets")
-		if err := cp.Dir(src, dest); err != nil {
-			fmt.Printf("Error copying %s: %v\n", src, err)
-		}
 	}
 
 	return nil
 }
 
-func (c *Compiler) compilePages(dir, version string) error {
-	pagesDir := filepath.Join(c.workingDir, dir)
-	pagesFiles, err := os.ReadDir(pagesDir)
+func (c *Compiler) compilePages(dir string) error {
+	publicDir := filepath.Join(c.workingDir, "public")
+	pagesFiles, err := os.ReadDir(filepath.Join(c.workingDir, dir))
 	if err != nil {
 		return err
 	}
 
 	for _, page := range pagesFiles {
+		// get file extension
+		if filepath.Ext(page.Name()) != ".html" {
+			log.Println("skipping file: " + page.Name())
+			continue
+		}
+
 		pageName := page.Name()
 		if page.IsDir() {
-			if err := c.compilePages(filepath.Join(dir, pageName), version); err != nil {
+			if err := c.compilePages(filepath.Join(dir, pageName)); err != nil {
 				return err
 			}
 			continue
@@ -112,7 +77,7 @@ func (c *Compiler) compilePages(dir, version string) error {
 		hasEmbeds := true
 		i := 0
 		for hasEmbeds && i < parseLimit {
-			doc, hasEmbeds, err = c.compile(doc, fileName, version)
+			doc, hasEmbeds, err = c.compile(doc, fileName)
 			if err != nil {
 				return err
 			}
@@ -120,8 +85,7 @@ func (c *Compiler) compilePages(dir, version string) error {
 		}
 
 		// write final html to file
-		outDir := strings.Replace(dir, "pages", "", 1)
-		pageFileName := filepath.Join(c.outputDir, outDir, pageName)
+		pageFileName := filepath.Join(publicDir, pageName)
 		log.Println("Creating page: " + pageFileName)
 		if err := os.MkdirAll(filepath.Dir(pageFileName), os.ModePerm); err != nil {
 			return err
@@ -134,47 +98,20 @@ func (c *Compiler) compilePages(dir, version string) error {
 	return nil
 }
 
-func (c *Compiler) compile(doc *html.Node, pageFilePath, version string) (*html.Node, bool, error) {
+func (c *Compiler) compile(doc *html.Node, pageFilePath string) (*html.Node, bool, error) {
 	page := ParsePage(doc)
 
-	siteName := filepath.Base(c.workingDir)
-	getPath := func(fileName string, subDir, fileType string) string {
-		pathParts := []string{".."}
-		moduleName := filepath.Base(filepath.Dir(pageFilePath))
-		if moduleName != "pages" {
-			fmt.Println("module name", moduleName)
-			if subDir == "scripts" {
-				pathParts = append(pathParts, "..", subDir, fileType, moduleName)
-			} else {
-				pathParts = append(pathParts, "..", subDir, siteName, fileType, moduleName)
-			}
-		} else {
-			if subDir == "scripts" {
-				pathParts = append(pathParts, subDir)
-			} else {
-				pathParts = append(pathParts, subDir, siteName, fileType)
-			}
+	pageCssFileName := strings.ReplaceAll(pageFilePath, ".html", ".css")
+	page.Layout.CSS = append(page.Layout.CSS, pageCssFileName)
 
-		}
-		pathParts = append(pathParts, fileName)
-		return filepath.Join(pathParts...)
-	}
-
-	pageCssFileName := strings.ReplaceAll(filepath.Base(pageFilePath), ".html", ".css")
-	page.Layout.CSS = append(page.Layout.CSS, getPath(pageCssFileName, "assets", "css"))
-
-	pageTsFileName := strings.ReplaceAll(filepath.Base(pageFilePath), ".html", ".ts")
-	pageJsFileName := strings.ReplaceAll(filepath.Base(pageFilePath), ".html", ".js")
-	page.Layout.JsMod = append(page.Layout.JsMod, getPath(pageTsFileName, "scripts", ""))
-	page.Layout.JsMod = append(page.Layout.JsMod, getPath(pageJsFileName, "assets", "js"))
-
-	_ = createFile(filepath.Join(c.workingDir, tsconfigFileName), []byte(defaultTsConfig), false)
+	pageTsFileName := strings.ReplaceAll(pageFilePath, ".html", ".ts")
+	page.Layout.JsMod = append(page.Layout.JsMod, pageTsFileName)
 
 	layoutFilePath := filepath.Join(filepath.Dir(pageFilePath), page.Layout.Src)
 	if _, err := os.Stat(layoutFilePath); err != nil {
 		return nil, false, fmt.Errorf("failed to compile %s. Layout file %s not found", pageFilePath, layoutFilePath)
 	}
-	log.Printf("Compiling Page: %s with %s\n", pageFilePath, layoutFilePath)
+	log.Printf("Compiling Page: %s with %s\n", pageFilePath, layoutFilePath, page.Layout.CSS, page.Layout.Js, page.Layout.JsMod)
 
 	buf := &bytes.Buffer{}
 	if err := html.Render(buf, doc); err != nil {
@@ -199,52 +136,39 @@ func (c *Compiler) compile(doc *html.Node, pageFilePath, version string) (*html.
 
 		dedupe := make(map[string]bool)
 		c.layoutHTML = buf.Bytes()
+
+		pageResources := append([]string{}, page.Layout.CSS...)
+		pageResources = append(pageResources, page.Layout.Js...)
+		pageResources = append(pageResources, page.Layout.JsMod...)
+
 		pageCSS := make([]string, len(page.Layout.CSS))
-		for _, css := range page.Layout.CSS {
-			css = filepath.Join(filepath.Dir(pageFilePath), css) // re-adjust css path
-			if _, ok := dedupe[css]; ok {
+		pageJs := make([]string, len(page.Layout.Js))
+		for _, res := range pageResources {
+			if !filepath.IsAbs(res) {
+				res = filepath.Join(filepath.Dir(pageFilePath), res) // re-adjust res path
+			}
+			if _, ok := dedupe[res]; ok {
 				continue
 			}
-			dedupe[css] = true
-			if err := createFile(css, nil, false); err != nil {
+			dedupe[res] = true
+			if err := createFile(res, nil, false); err != nil {
 				log.Println("error writing css file", err.Error())
 			}
-			i := strings.Index(css, filepath.Clean("/assets")) // make path os portable
+			i := strings.Index(res, filepath.Clean("/assets")) // make path os portable
 			if i >= 0 {
-				css = css[i:]
-				pageCSS = append(pageCSS, `<link rel="stylesheet" href="`+css+`">`)
+				res = res[i:]
+			} else {
+				res = filepath.Join("assets", filepath.Base(res))
 			}
-		}
 
-		pageJs := make([]string, len(page.Layout.Js))
-		for _, js := range page.Layout.Js {
-			js = filepath.Join(filepath.Dir(pageFilePath), js) // re-adjust js path
-			if _, ok := dedupe[js]; ok {
-				continue
-			}
-			dedupe[js] = true
-			if err := createFile(js, nil, false); err != nil {
-				log.Println("error writing js file", err.Error())
-			}
-			i := strings.Index(js, filepath.Clean("/assets")) // make path os portable
-			if i >= 0 {
-				js = js[i:]
-				pageJs = append(pageJs, `<script src="`+js+`"></script>`)
-			}
-		}
-		for _, js := range page.Layout.JsMod {
-			js = filepath.Join(filepath.Dir(pageFilePath), js) // re-adjust js path
-			if _, ok := dedupe[js]; ok {
-				continue
-			}
-			dedupe[js] = true
-			if err := createFile(js, nil, false); err != nil {
-				log.Println("error writing js file", err.Error())
-			}
-			i := strings.Index(js, filepath.Clean("/assets")) // make path os portable
-			if i >= 0 {
-				js = js[i:]
-				pageJs = append(pageJs, `<script type="module" src="`+js+`"></script>`)
+			switch filepath.Ext(res) {
+			case ".css":
+				pageCSS = append(pageCSS, `<link rel="stylesheet" href="`+res+`">`)
+			case ".js":
+				pageJs = append(pageJs, `<script src="`+res+`"></script>`)
+			case ".ts":
+				res = strings.Replace(res, ".ts", ".js", 1)
+				pageJs = append(pageJs, `<script type="module" src="`+res+`"></script>`)
 			}
 		}
 

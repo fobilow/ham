@@ -9,7 +9,7 @@
 <div id="app-info"></div>
 <div class="container">
     <div class="row">
-      <embed type="ham/page" src="../pages" />
+      <embed type="ham/page" src="pages" />
     </div>
 </div>
 <embed type="ham/layout-js" src="../assets/js" />

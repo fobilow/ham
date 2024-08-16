@@ -78,6 +78,5 @@ For specific version, replace @latest with version number
 ### USING HAM
 * ham init [sitename]
 * ham build -w [working dir] -o [output directory]
-* ham serve -w [working dir]
 * ham version
 * ham help
