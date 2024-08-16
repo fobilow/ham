@@ -157,16 +157,17 @@ func (c *Compiler) compile(doc *html.Node, pageFilePath string) (*html.Node, boo
 			i := strings.Index(res, filepath.Clean("/assets")) // make path os portable
 			if i >= 0 {
 				res = res[i:]
-			} else {
-				res = filepath.Join("assets", filepath.Base(res))
 			}
 
 			switch filepath.Ext(res) {
 			case ".css":
+				res = filepath.Join("assets", "css", filepath.Base(res))
 				pageCSS = append(pageCSS, `<link rel="stylesheet" href="`+res+`">`)
 			case ".js":
+				res = filepath.Join("assets", "js", filepath.Base(res))
 				pageJs = append(pageJs, `<script src="`+res+`"></script>`)
 			case ".ts":
+				res = filepath.Join("assets", "js", filepath.Base(res))
 				res = strings.Replace(res, ".ts", ".js", 1)
 				pageJs = append(pageJs, `<script type="module" src="`+res+`"></script>`)
 			}
