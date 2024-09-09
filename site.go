@@ -2,12 +2,9 @@ package ham
 
 import (
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/skratchdot/open-golang/open"
 )
 
 const DefaultOutputDir = "./public"
@@ -44,6 +41,7 @@ const defaultTsConfig = `{
   "compilerOptions": {
     "target": "es2020",                                  /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */
     "module": "node16",                                /* Specify what module code is generated. */
+	"moduleResolution": "Node",
     "esModuleInterop": true,                             /* Emit additional JavaScript to ease support for importing CommonJS modules. This enables 'allowSyntheticDefaultImports' for type compatibility. */
     "forceConsistentCasingInFileNames": true,            /* Ensure that casing is correct in imports. */
     "strict": true,                                      /* Enable all strict type-checking options. */
@@ -186,33 +184,12 @@ func (h *Site) Build(workingDir, outputDir string) error {
 	return c.Compile()
 }
 
-func (h *Site) Serve(workingDir string) error {
-	outputDir := filepath.Join(workingDir, DefaultOutputDir)
-	if err := h.Build(workingDir, outputDir); err != nil {
-		return err
-	}
-
-	if err := open.Start(fmt.Sprintf("http://%s:%d", h.host, h.port)); err != nil {
-		return err
-	}
-
-	absDocRoot, err := filepath.Abs(outputDir)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println("Serving " + absDocRoot)
-	http.Handle("/", http.FileServer(http.Dir(absDocRoot)))
-	return http.ListenAndServe(fmt.Sprintf("%s:%d", h.host, h.port), nil)
-}
-
 func (h *Site) Help() string {
 	return `usage: ham <command> [<options>]
 
 The following are supported HAM commands:
   init		Creates a new HAM site
   build		Compiles HAM site into html website
-  serve		Starts a web server and serves a HAM site
   version	Displays version of HAM that you are running
 `
 }

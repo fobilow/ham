@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/fobilow/ham"
+	"github.com/fobilow/ham/proxy"
 )
 
 var Version string
@@ -50,6 +51,8 @@ func main() {
 			return
 		}
 		checkError(h.Build(getWorkingDir(*bwd), ham.DefaultOutputDir))
+	case "proxy":
+		proxy.Run()
 	case "version":
 		fmt.Println("Version: " + Version)
 	default:
