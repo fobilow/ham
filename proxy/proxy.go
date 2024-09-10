@@ -19,7 +19,7 @@ import (
 )
 
 var loginPage = helper.GetEnv("LOGIN_PAGE", "login.html")
-var webRoot = helper.GetEnv("WEB_ROOT", "./web")
+var webRoot = helper.GetEnv("WEB_ROOT", "./public")
 var appPort = helper.GetEnv("PROXY_PORT", "8082")
 var apiEndpoint = helper.GetEnv("API_ENDPOINT", "http://localhost:8080")
 var apiProxyPrefix = helper.GetEnv("API_PROXY_PREFIX", "/api/")
