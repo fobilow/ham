@@ -96,17 +96,6 @@ func handleApiRequest(c *gin.Context) {
 				AccessToken: session[0],
 				Expiry:      time.Unix(int64(expiry), 0),
 			}
-		} else {
-			tokenCookie, err := c.Request.Cookie("access_token")
-			if err != nil {
-				c.Redirect(302, loginPage)
-				return nil
-			}
-			if res.StatusCode == http.StatusUnauthorized {
-				delete(appSession, tokenCookie.Value)
-				c.Redirect(302, loginPage)
-				return nil
-			}
 		}
 
 		return nil
