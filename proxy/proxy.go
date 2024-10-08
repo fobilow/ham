@@ -86,7 +86,7 @@ func handleApiRequest(c *gin.Context) {
 				Value:    session[0],
 				Path:     "/",
 				Domain:   "",
-				Expires:  time.Now().Add(time.Hour),
+				Expires:  time.Unix(int64(expiry), 0),
 				Secure:   false,
 				HttpOnly: false,
 			}
@@ -112,8 +112,8 @@ func handleApiRequest(c *gin.Context) {
 
 func handleWebRequest(c *gin.Context) {
 	log.Println("handling WEB Request...")
-	dir, file := path.Split(c.Request.RequestURI)
-	file = strings.Split(file, "?")[0]
+	uri := strings.Split(c.Request.RequestURI, "?")[0]
+	dir, file := path.Split(uri)
 	if file == "" {
 		file = "index.html"
 	}
@@ -144,6 +144,9 @@ func handleWebRequest(c *gin.Context) {
 				return
 			}
 		}
+		c.Header("Cache-Control", "max-age=0,no-store,no-cache,must-revalidate")
+		c.Header("Expires", "Thu, 01 Jan 1970 00:00:00 GMT")
+		c.Header("Pragma", "no-store,no-cache")
 	}
 
 	log.Println("File:", file)
