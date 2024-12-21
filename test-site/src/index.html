@@ -1,28 +1,17 @@
 <div class="page"
      data-ham-page-config='{
-     "layout": "../layouts/default.html",
-     "css": [
-     "../assets/css/test.css",
-     "../assets/css/test2.css"
-     ],
-     "js": [
-     "../assets/js/test.js",
-     "../assets/js/test2.js"
-     ],
-     "js-mod": [
-     "../assets/js/test3.js"
-     ]
+     "layout": "default.lhtml"
      }'
 >
-  <embed type="ham/partial" src="header.html"/>
+  <embed type="ham/partial" src="header.phtml"/>
   <div id="loadDataHere">
-    <table></table>
+    <table class="ham-remove"></table>
   </div>
-  <embed type="ham/partial" src="../1.html" />
+  <embed type="ham/partial" src="1.phtml" data-ham-replace="key:value,comment_start:<!--,comment_end:-->" />
   <p>
-  <embed type="ham/partial" src="../2.html" />
+  <embed type="ham/partial" src="2.phtml" />
   </p>
 </div>
 <div>
-  <embed type="ham/partial" src="../3.html" />
+  <embed type="ham/partial" src="3.phtml" />
 </div>
