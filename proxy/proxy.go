@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -129,7 +130,12 @@ func handleWebRequest(c *gin.Context) {
 	case ".html":
 		b, err := os.ReadFile(file)
 		if err != nil {
-			c.AbortWithStatus(http.StatusInternalServerError)
+			if errors.Is(err, os.ErrNotExist) {
+				c.AbortWithStatus(http.StatusNotFound)
+			} else {
+				c.AbortWithStatus(http.StatusInternalServerError)
+			}
+			return
 		}
 		authPage := strings.Contains(string(b), `data-ham-proxy="requires-authentication"`)
 		if authPage {
