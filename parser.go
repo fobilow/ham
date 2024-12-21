@@ -2,7 +2,9 @@ package ham
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
+	"strings"
 
 	"golang.org/x/net/html"
 )
@@ -21,8 +23,9 @@ type Page struct {
 }
 
 type Embed struct {
-	Type string
-	Src  string
+	Type    string
+	Src     string
+	Replace string
 }
 
 func ParseLayout(doc *html.Node) Layout {
@@ -49,11 +52,13 @@ func parseLayout(start *html.Node, layout *Layout) {
 		case "embed":
 			em := Embed{}
 			for _, attr := range start.Attr {
-				if attr.Key == "type" {
+				switch attr.Key {
+				case "type":
 					em.Type = attr.Val
-				}
-				if attr.Key == "src" {
+				case "src":
 					em.Src = attr.Val
+				case "data-ham-replace":
+					em.Replace = attr.Val
 				}
 			}
 			layout.Embeds = append(layout.Embeds, em)
@@ -88,15 +93,22 @@ func parsePage(start *html.Node, page *Page) {
 	}
 	// fmt.Println("page transversing ", start.Data)
 	if start.Type == html.ElementNode {
+		for _, attr := range start.Attr {
+			if attr.Key == "class" && strings.Contains(attr.Val, "ham-remove") {
+				start.Parent.RemoveChild(start)
+			}
+		}
 		switch start.Data {
 		case "embed":
 			em := Embed{}
 			for _, attr := range start.Attr {
-				if attr.Key == "type" {
+				switch attr.Key {
+				case "type":
 					em.Type = attr.Val
-				}
-				if attr.Key == "src" {
+				case "src":
 					em.Src = attr.Val
+				case "data-ham-replace":
+					em.Replace = attr.Val
 				}
 			}
 			page.Embeds = append(page.Embeds, em)
@@ -127,4 +139,8 @@ func parsePage(start *html.Node, page *Page) {
 
 func embedPlaceholder(src string) string {
 	return "{embed:" + src + "}"
+}
+
+func embedReplaceKey(key string) string {
+	return fmt.Sprintf("__%s__", key)
 }

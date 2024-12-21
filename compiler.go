@@ -84,6 +84,9 @@ func (c *Compiler) compilePages(dir string) error {
 			i++
 		}
 
+		// this should take care of any "ham-remove" found in embedded partials
+		c.compile(doc, fileName)
+
 		// write final html to file
 		pageFileName := filepath.Join(publicDir, pageName)
 		log.Println("Creating page: " + pageFileName)
@@ -111,7 +114,8 @@ func (c *Compiler) compile(doc *html.Node, pageFilePath string) (*html.Node, boo
 	if _, err := os.Stat(layoutFilePath); err != nil {
 		return nil, false, fmt.Errorf("failed to compile %s. Layout file %s not found", pageFilePath, layoutFilePath)
 	}
-	log.Printf("Compiling Page: %s with %s\n", pageFilePath, layoutFilePath, page.Layout.CSS, page.Layout.Js, page.Layout.JsMod)
+	log.Printf("Compiling Page: %s with %s\n", pageFilePath, layoutFilePath)
+	log.Println("Resources", page.Layout.CSS, page.Layout.Js, page.Layout.JsMod)
 
 	buf := &bytes.Buffer{}
 	if err := html.Render(buf, doc); err != nil {
@@ -185,6 +189,11 @@ func (c *Compiler) compile(doc *html.Node, pageFilePath string) (*html.Node, boo
 				embedFilePath := filepath.Join(filepath.Dir(layoutFilePath), embed.Src)
 				log.Println("embedding", embedFilePath)
 				embedContent := readFile(embedFilePath)
+
+				if embed.Replace != "" {
+					embedContent = c.handleEmbedReplacements(embedContent, embed.Replace)
+				}
+
 				c.pageHTML = bytes.ReplaceAll(c.pageHTML, []byte(embedPlaceholder(embed.Src)), embedContent)
 			}
 		}
@@ -196,6 +205,11 @@ func (c *Compiler) compile(doc *html.Node, pageFilePath string) (*html.Node, boo
 			embedFilePath := filepath.Join(filepath.Dir(pageFilePath), embed.Src)
 			log.Println("embedding", embedFilePath)
 			embedContent := readFile(embedFilePath)
+
+			if embed.Replace != "" {
+				embedContent = c.handleEmbedReplacements(embedContent, embed.Replace)
+			}
+
 			c.pageHTML = bytes.ReplaceAll(c.pageHTML, []byte(embedPlaceholder(embed.Src)), embedContent)
 		}
 	}
@@ -206,6 +220,19 @@ func (c *Compiler) compile(doc *html.Node, pageFilePath string) (*html.Node, boo
 	}
 
 	return doc, len(page.Embeds) > 0, nil
+}
+
+func (c *Compiler) handleEmbedReplacements(content []byte, replacements string) []byte {
+	replaces := strings.Split(replacements, ",")
+	for _, replace := range replaces {
+		find := strings.Split(replace, ":")
+		if len(find) == 2 {
+			log.Println("replacing", embedReplaceKey(find[0]), find[1])
+			content = bytes.ReplaceAll(content, []byte(embedReplaceKey(find[0])), []byte(find[1]))
+		}
+	}
+
+	return content
 }
 
 func (c *Compiler) Reset() {

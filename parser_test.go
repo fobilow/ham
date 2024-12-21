@@ -1,7 +1,9 @@
 package ham
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"testing"
 
@@ -21,17 +23,24 @@ func TestParsePage(t *testing.T) {
 		t.Errorf("parse failed: expected %d but got %d page embeds", want, got)
 	}
 
-	want = 2
+	want = 0
 	got = len(page.Layout.Js)
 	if got != want {
 		t.Errorf("parse failed: expected %d but got %d layout Js embeds", want, got)
 	}
 
-	want = 2
+	want = 0
 	got = len(page.Layout.CSS)
 	if got != want {
 		t.Errorf("parse failed: expected %d but got %d layout CSS embeds", want, got)
 	}
+
+	buf := &bytes.Buffer{}
+	if err := html.Render(buf, doc); err != nil {
+		t.Errorf("render failed: %v", err)
+	}
+
+	fmt.Println(buf.String())
 }
 
 func TestParseLayout(t *testing.T) {
