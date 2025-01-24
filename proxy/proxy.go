@@ -19,7 +19,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var loginPage = helper.GetEnv("LOGIN_PAGE", "login.html")
 var webRoot = helper.GetEnv("WEB_ROOT", "./public")
 var appPort = helper.GetEnv("PROXY_PORT", "8082")
 var apiEndpoint = helper.GetEnv("API_ENDPOINT", "http://localhost:8080")
@@ -46,8 +45,8 @@ func GetSession(token string) *Session {
 }
 
 func Run() {
-	fmt.Printf("Run Parameters:\n API_ENDPOINT: %s\n LOGIN_PAGE: %s\n WEB_ROOT: %s\n PROXY_PORT: %s\n API_PROXY_PREFIX: %s\n",
-		apiEndpoint, loginPage, webRoot, appPort, apiProxyPrefix)
+	fmt.Printf("Run Parameters:\n API_ENDPOINT: %s\n WEB_ROOT: %s\n PROXY_PORT: %s\n API_PROXY_PREFIX: %s\n",
+		apiEndpoint, webRoot, appPort, apiProxyPrefix)
 	if _, err := os.Stat(webRoot); err != nil {
 		log.Fatal("web root does not exist. ham-proxy cannot start without a web root")
 	}
@@ -142,12 +141,10 @@ func handleWebRequest(c *gin.Context) {
 			// check if user is logged in
 			tokenCookie, err := c.Request.Cookie("access_token")
 			if err != nil {
-				c.Redirect(302, loginPage)
-				return
+				c.SetCookie("access_token", "", 0, "/", "", false, false)
 			}
 			if GetSession(tokenCookie.Value).IsInvalid() {
-				c.Redirect(302, loginPage)
-				return
+				c.SetCookie("access_token", "", 0, "/", "", false, false)
 			}
 		}
 		c.Header("Cache-Control", "max-age=0,no-store,no-cache,must-revalidate")
