@@ -142,8 +142,7 @@ func handleWebRequest(c *gin.Context) {
 			tokenCookie, err := c.Request.Cookie("access_token")
 			if err != nil {
 				c.SetCookie("access_token", "", 0, "/", "", false, false)
-			}
-			if GetSession(tokenCookie.Value).IsInvalid() {
+			} else if GetSession(tokenCookie.Value).IsInvalid() {
 				c.SetCookie("access_token", "", 0, "/", "", false, false)
 			}
 		}
