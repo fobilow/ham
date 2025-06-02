@@ -41,19 +41,12 @@ func (c *Compiler) Compile() error {
 }
 
 func (c *Compiler) compilePages(dir string) error {
-	publicDir := filepath.Join(c.workingDir, "public")
 	pagesFiles, err := os.ReadDir(filepath.Join(c.workingDir, dir))
 	if err != nil {
 		return err
 	}
 
 	for _, page := range pagesFiles {
-		// get file extension
-		if filepath.Ext(page.Name()) != ".html" {
-			log.Println("skipping file: " + page.Name())
-			continue
-		}
-
 		pageName := page.Name()
 		if page.IsDir() {
 			if err := c.compilePages(filepath.Join(dir, pageName)); err != nil {
@@ -62,8 +55,16 @@ func (c *Compiler) compilePages(dir string) error {
 			continue
 		}
 
-		fileName := filepath.Join(c.workingDir, dir, pageName)
-		file, err := os.Open(fileName)
+		// get file extension
+		if filepath.Ext(page.Name()) != ".html" {
+			log.Println("skipping file: " + page.Name())
+			continue
+		}
+
+		srcFileName := filepath.Join(c.workingDir, dir, pageName)
+		pageDir := strings.Replace(dir, "src", "", 1)
+		pageFileName := filepath.Join(c.workingDir, "public", pageDir, pageName)
+		file, err := os.Open(srcFileName)
 		if err != nil {
 			return err
 		}
@@ -77,7 +78,7 @@ func (c *Compiler) compilePages(dir string) error {
 		hasEmbeds := true
 		i := 0
 		for hasEmbeds && i < parseLimit {
-			doc, hasEmbeds, err = c.compile(doc, fileName)
+			doc, hasEmbeds, err = c.compile(doc, srcFileName)
 			if err != nil {
 				return err
 			}
@@ -85,11 +86,10 @@ func (c *Compiler) compilePages(dir string) error {
 		}
 
 		// this should take care of any "ham-remove" found in embedded partials
-		c.compile(doc, fileName)
+		c.compile(doc, srcFileName)
 
 		// write final html to file
-		pageFileName := filepath.Join(publicDir, pageName)
-		log.Println("Creating page: " + pageFileName)
+		log.Println("Creating page: " + pageFileName + " from " + srcFileName)
 		if err := os.MkdirAll(filepath.Dir(pageFileName), os.ModePerm); err != nil {
 			return err
 		}
@@ -110,12 +110,61 @@ func (c *Compiler) compile(doc *html.Node, pageFilePath string) (*html.Node, boo
 	pageTsFileName := strings.ReplaceAll(pageFilePath, ".html", ".ts")
 	page.Layout.JsMod = append(page.Layout.JsMod, pageTsFileName)
 
-	layoutFilePath := filepath.Join(filepath.Dir(pageFilePath), page.Layout.Src)
-	if _, err := os.Stat(layoutFilePath); err != nil {
-		return nil, false, fmt.Errorf("failed to compile %s. Layout file %s not found", pageFilePath, layoutFilePath)
+	log.Println("Resources", pageFilePath, page.Layout.CSS, page.Layout.Js, page.Layout.JsMod)
+	dedupe := make(map[string]bool)
+	pageResources := append([]string{}, page.Layout.CSS...)
+	pageResources = append(pageResources, page.Layout.Js...)
+	pageResources = append(pageResources, page.Layout.JsMod...)
+
+	pageCSS := make([]string, len(page.Layout.CSS))
+	pageJs := make([]string, len(page.Layout.Js))
+	for _, res := range pageResources {
+		if !filepath.IsAbs(res) {
+			res = filepath.Join(filepath.Dir(pageFilePath), res) // re-adjust res path
+		}
+		if _, ok := dedupe[res]; ok {
+			continue
+		}
+		dedupe[res] = true
+		if err := createFile(res, nil, false); err != nil {
+			log.Println("error writing css file", err.Error())
+		}
+		i := strings.Index(res, filepath.Clean("/assets")) // make path os portable
+		if i >= 0 {
+			res = res[i:]
+		}
+
+		switch filepath.Ext(res) {
+		case ".css":
+			d := filepath.Base(filepath.Dir(pageFilePath))
+			p := []string{"/", "assets", "css"}
+			if d != srcDir {
+				p = append(p, d)
+			}
+			p = append(p, filepath.Base(res))
+			res = filepath.Join(p...)
+			pageCSS = append(pageCSS, `<link rel="stylesheet" href="`+res+`">`)
+		case ".js":
+			d := filepath.Base(filepath.Dir(pageFilePath))
+			p := []string{"/", "assets", "js"}
+			if d != srcDir {
+				p = append(p, d)
+			}
+			p = append(p, filepath.Base(res))
+			res = filepath.Join(p...)
+			pageJs = append(pageJs, `<script src="`+res+`"></script>`)
+		case ".ts":
+			d := filepath.Base(filepath.Dir(pageFilePath))
+			p := []string{"/", "assets", "js"}
+			if d != srcDir {
+				p = append(p, d)
+			}
+			p = append(p, filepath.Base(res))
+			res = filepath.Join(p...)
+			res = strings.Replace(res, ".ts", ".js", 1)
+			pageJs = append(pageJs, `<script type="module" src="`+res+`"></script>`)
+		}
 	}
-	log.Printf("Compiling Page: %s with %s\n", pageFilePath, layoutFilePath)
-	log.Println("Resources", page.Layout.CSS, page.Layout.Js, page.Layout.JsMod)
 
 	buf := &bytes.Buffer{}
 	if err := html.Render(buf, doc); err != nil {
@@ -125,68 +174,35 @@ func (c *Compiler) compile(doc *html.Node, pageFilePath string) (*html.Node, boo
 	c.pageHTML = make([]byte, buf.Len())
 	copy(c.pageHTML, buf.Bytes())
 
-	if c.layoutHTML == nil {
+	if c.layoutHTML == nil && page.Layout.Src != "" {
+		layoutFilePath := filepath.Join(filepath.Dir(pageFilePath), page.Layout.Src)
+		if _, err := os.Stat(layoutFilePath); err != nil {
+			return nil, false, fmt.Errorf("failed to compile %s. Layout file %s not found", pageFilePath, layoutFilePath)
+		}
+		log.Printf("Compiling Page: %s with %s\n", pageFilePath, layoutFilePath)
+
 		c.layoutHTML = readFile(layoutFilePath)
-		doc, err := html.Parse(bytes.NewBuffer(c.layoutHTML))
+		lDoc, err := html.Parse(bytes.NewBuffer(c.layoutHTML))
 		if err != nil {
 			return nil, false, err
 		}
 
-		layout := ParseLayout(doc)
+		layout := ParseLayout(lDoc)
+		layout.Path = layoutFilePath
 		buf.Reset()
-		if err := html.Render(buf, doc); err != nil {
+		if err := html.Render(buf, lDoc); err != nil {
 			return nil, false, err
 		}
 
-		dedupe := make(map[string]bool)
 		c.layoutHTML = buf.Bytes()
-
-		pageResources := append([]string{}, page.Layout.CSS...)
-		pageResources = append(pageResources, page.Layout.Js...)
-		pageResources = append(pageResources, page.Layout.JsMod...)
-
-		pageCSS := make([]string, len(page.Layout.CSS))
-		pageJs := make([]string, len(page.Layout.Js))
-		for _, res := range pageResources {
-			if !filepath.IsAbs(res) {
-				res = filepath.Join(filepath.Dir(pageFilePath), res) // re-adjust res path
-			}
-			if _, ok := dedupe[res]; ok {
-				continue
-			}
-			dedupe[res] = true
-			if err := createFile(res, nil, false); err != nil {
-				log.Println("error writing css file", err.Error())
-			}
-			i := strings.Index(res, filepath.Clean("/assets")) // make path os portable
-			if i >= 0 {
-				res = res[i:]
-			}
-
-			switch filepath.Ext(res) {
-			case ".css":
-				res = filepath.Join("assets", "css", filepath.Base(res))
-				pageCSS = append(pageCSS, `<link rel="stylesheet" href="`+res+`">`)
-			case ".js":
-				res = filepath.Join("assets", "js", filepath.Base(res))
-				pageJs = append(pageJs, `<script src="`+res+`"></script>`)
-			case ".ts":
-				res = filepath.Join("assets", "js", filepath.Base(res))
-				res = strings.Replace(res, ".ts", ".js", 1)
-				pageJs = append(pageJs, `<script type="module" src="`+res+`"></script>`)
-			}
-		}
-
 		c.pageHTML = bytes.Replace(c.pageHTML, []byte("<html><head></head><body>"), []byte(""), 1) // strip out <html><head></head><body>
-		c.pageHTML = bytes.Replace(c.pageHTML, []byte("</body></html>"), []byte(""), 1)            // strip out </html><body>
+		c.pageHTML = bytes.Replace(c.pageHTML, []byte("</body></html>"), []byte(""), 1)            // strip out </body></html>
 		c.pageHTML = bytes.Replace(c.layoutHTML, []byte("{ham:page}"), c.pageHTML, 1)
-		c.pageHTML = bytes.ReplaceAll(c.pageHTML, []byte("{ham:css}"), []byte(strings.Join(pageCSS, "\n")))
-		c.pageHTML = bytes.ReplaceAll(c.pageHTML, []byte("{ham:js}"), []byte(strings.Join(pageJs, "\n")))
 
 		// find and replace layout embeds
 		for _, embed := range layout.Embeds {
 			if embed.Src != "" {
-				embedFilePath := filepath.Join(filepath.Dir(layoutFilePath), embed.Src)
+				embedFilePath := filepath.Join(filepath.Dir(layout.Path), embed.Src)
 				log.Println("embedding", embedFilePath)
 				embedContent := readFile(embedFilePath)
 
@@ -198,6 +214,9 @@ func (c *Compiler) compile(doc *html.Node, pageFilePath string) (*html.Node, boo
 			}
 		}
 	}
+
+	c.pageHTML = bytes.ReplaceAll(c.pageHTML, []byte("{ham:css}"), []byte(strings.Join(pageCSS, "\n")))
+	c.pageHTML = bytes.ReplaceAll(c.pageHTML, []byte("{ham:js}"), []byte(strings.Join(pageJs, "\n")))
 
 	// find and replace page embeds
 	for _, embed := range page.Embeds {

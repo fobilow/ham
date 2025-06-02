@@ -11,6 +11,7 @@ import (
 
 type Layout struct {
 	Src    string   `json:"layout"`
+	Path   string   `json:"path"`
 	CSS    []string `json:"css,omitempty"`
 	Js     []string `json:"js,omitempty"`
 	JsMod  []string `json:"js-mod,omitempty"`
@@ -111,10 +112,19 @@ func parsePage(start *html.Node, page *Page) {
 					em.Replace = attr.Val
 				}
 			}
-			page.Embeds = append(page.Embeds, em)
-			// replace <embed> tag with placeholders
 			start.Type = 1
-			start.Data = embedPlaceholder(em.Src)
+			switch em.Type {
+			case "ham/partial":
+				// replace <embed> tag with placeholders
+				start.Data = embedPlaceholder(em.Src)
+				page.Embeds = append(page.Embeds, em)
+			case "ham/page":
+				start.Data = "{ham:page}"
+			case "ham/layout-js":
+				start.Data = "{ham:js}"
+			case "ham/layout-css":
+				start.Data = "{ham:css}"
+			}
 		case "div":
 			var newAttr []html.Attribute
 			for _, attr := range start.Attr {
