@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/fobilow/detach"
 	"github.com/fobilow/ham"
 	"github.com/fobilow/ham/proxy"
 )
@@ -17,6 +18,10 @@ var Version string
 var validSiteName = regexp.MustCompile(`\W+`)
 
 func main() {
+	// attach -d flag to default CommandLine flag set
+	cleanup := detach.Setup("d", nil)
+	defer cleanup()
+
 	h := ham.NewSite()
 	newCmd := newFlagSet(h, "init")
 	buildCmd := newFlagSet(h, "build")
