@@ -140,10 +140,8 @@ func handleWebRequest(c *gin.Context) {
 		if authPage {
 			// check if user is logged in
 			tokenCookie, err := c.Request.Cookie("access_token")
-			if err != nil {
-				c.SetCookie("access_token", "", 0, "/", "", false, false)
-			} else if GetSession(tokenCookie.Value).IsInvalid() {
-				c.SetCookie("access_token", "", 0, "/", "", false, false)
+			if err != nil || GetSession(tokenCookie.Value).IsInvalid() {
+				c.SetCookie("access_token", "", 0, "/", "", false, false) // delete cookie
 			}
 		}
 		c.Header("Cache-Control", "max-age=0,no-store,no-cache,must-revalidate")
